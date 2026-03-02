@@ -1,0 +1,2216 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Pixel Eater</title>
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+<link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
+<link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+<link rel="shortcut icon" href="/favicon.ico">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,300&family=DM+Mono:wght@400;500&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; border-radius: 0 !important; }
+
+:root {
+  --bg:      #f4f4f2;
+  --surface: #ffffff;
+  --border:  #e2e2e0;
+  --border-mid: #cecec8;
+  --text:    #0c0c0b;
+  --sub:     #5c5c58;
+  --faint:   #9c9c96;
+  --panel-w: 320px;
+  --active-bg: #0c0c0b;
+  --active-fg: #ffffff;
+}
+
+body.dark {
+  --bg:         #111110;
+  --surface:    #1a1a18;
+  --border:     #2a2a27;
+  --border-mid: #3a3a36;
+  --text:       #eeeee8;
+  --sub:        #a0a09a;
+  --faint:      #606058;
+  /* Active/selected state uses an accent that stays readable */
+  --active-bg:  #eeeee8;
+  --active-fg:  #111110;
+}
+
+/* Override every .active pattern in dark mode */
+body.dark .char-btn.active,
+body.dark .font-pill.active,
+body.dark .dir-btn.active,
+body.dark .lgm-btn.active,
+body.dark .space-btn.active,
+body.dark .img-dir-btn.active,
+body.dark .btn-invert.active {
+  background: var(--active-bg) !important;
+  color:      var(--active-fg) !important;
+  border-color: var(--active-bg) !important;
+}
+
+body.dark .char-btn:hover {
+  background: var(--border-mid);
+  color: var(--text);
+  border-color: var(--text);
+}
+
+body.dark .active-char {
+  background: var(--active-bg);
+  color: var(--active-fg);
+}
+
+body.dark .btn-primary {
+  background: var(--text);
+  color: #111110;
+  border-color: var(--text);
+}
+
+body.dark .btn-dark-toggle svg {
+  stroke: var(--sub);
+}
+
+body.dark canvas { box-shadow: 0 0 0 1px rgba(255,255,255,0.06); }
+
+body.dark .canvas-placeholder {
+  background: var(--surface);
+}
+
+/* Sliders in dark mode */
+body.dark input[type=range] {
+  background: transparent;
+}
+
+body {
+  font-family: 'DM Sans', sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  height: 100vh;
+  display: flex; flex-direction: column;
+  overflow: hidden;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ── Nav ── */
+nav {
+  height: 48px;
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 0 18px;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface);
+  flex-shrink: 0; z-index: 100;
+}
+
+.nav-brand { display: flex; align-items: center; gap: 10px; }
+
+.brand-svg {
+  height: 34px; width: auto; display: block;
+  color: var(--text);
+  transition: color 0.2s;
+}
+
+.nav-right { display: flex; align-items: center; gap: 5px; }
+
+.btn-ghost {
+  height: 28px; padding: 0 11px;
+  border: 1px solid var(--border); background: transparent;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 10.5px; font-weight: 500;
+  letter-spacing: 0.06em; text-transform: uppercase;
+  color: var(--sub); cursor: pointer; transition: all 0.12s;
+}
+.btn-ghost:hover { border-color: var(--text); color: var(--text); }
+
+.btn-primary {
+  height: 28px; padding: 0 13px;
+  background: var(--text); color: white;
+  border: 1px solid var(--text);
+  font-family: 'DM Sans', sans-serif;
+  font-size: 10.5px; font-weight: 500;
+  letter-spacing: 0.06em; text-transform: uppercase;
+  cursor: pointer; transition: opacity 0.12s;
+  display: flex; align-items: center; gap: 5px;
+}
+.btn-primary:hover { opacity: 0.75; }
+.btn-primary:disabled { background: var(--border); border-color: var(--border); color: var(--faint); cursor: not-allowed; opacity: 1; }
+
+.btn-invert {
+  height: 28px; padding: 0 11px;
+  border: 1px solid var(--border); background: transparent;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 10.5px; font-weight: 500;
+  letter-spacing: 0.06em; text-transform: uppercase;
+  color: var(--sub); cursor: pointer; transition: all 0.12s;
+  display: flex; align-items: center; gap: 5px;
+}
+.btn-invert:hover { border-color: var(--text); color: var(--text); }
+.btn-invert.active { background: var(--text); color: white; border-color: var(--text); }
+
+/* ── Layout ── */
+.workspace {
+  display: grid; grid-template-columns: var(--panel-w) 1fr;
+  flex: 1; min-height: 0; overflow: hidden;
+}
+
+/* ── Panel ── */
+.panel {
+  overflow-y: auto; background: var(--surface);
+  border-right: 1px solid var(--border);
+  display: flex; flex-direction: column; height: 100%;
+}
+.panel::-webkit-scrollbar { width: 2px; }
+.panel::-webkit-scrollbar-thumb { background: var(--border); }
+.panel-inner { display: flex; flex-direction: column; flex: 1; }
+
+.section-block { border-bottom: 1px solid var(--border); padding: 13px 14px; }
+
+.section-top {
+  display: flex; align-items: center; justify-content: space-between; margin-bottom: 11px;
+}
+
+.section-label {
+  font-size: 9.5px; font-weight: 600;
+  letter-spacing: 0.12em; text-transform: uppercase; color: var(--faint);
+}
+
+.section-reset {
+  font-size: 9.5px; font-weight: 500; color: var(--faint);
+  background: none; border: none; cursor: pointer;
+  font-family: 'DM Sans', sans-serif;
+  letter-spacing: 0.06em; text-transform: uppercase; padding: 0; transition: color 0.12s;
+}
+.section-reset:hover { color: var(--text); }
+
+/* Upload Zone */
+.upload-card {
+  position: relative; min-height: 80px; cursor: pointer;
+  background: var(--bg); border: 1px dashed var(--border-mid); transition: border-color 0.15s;
+}
+.upload-card:hover { border-color: var(--text); }
+.upload-overlay { position: absolute; inset: 0; background: rgba(0,0,0,0.02); opacity: 0; transition: opacity 0.2s; }
+.upload-card:hover .upload-overlay { opacity: 1; }
+.upload-card input { position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%; }
+.upload-card.drag-over { border-color: var(--text); border-style: solid; }
+
+.upload-content {
+  position: relative; z-index: 1;
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  min-height: 80px; gap: 5px; pointer-events: none;
+}
+.upload-icon { font-size: 16px; opacity: 0.25; }
+.upload-text { font-size: 11px; font-weight: 500; color: var(--sub); }
+.upload-sub  { font-size: 9.5px; color: var(--faint); letter-spacing: 0.06em; text-transform: uppercase; }
+
+.ctrl { margin-bottom: 11px; }
+.ctrl:last-child { margin-bottom: 0; }
+
+.ctrl-label {
+  display: flex; justify-content: space-between; align-items: center;
+  font-size: 11.5px; font-weight: 500; color: var(--sub); margin-bottom: 7px;
+}
+
+.ctrl-val {
+  font-family: 'DM Mono', monospace;
+  font-size: 10px; color: var(--faint); background: var(--bg); padding: 1px 5px;
+}
+
+input[type="range"] {
+  width: 100%; -webkit-appearance: none;
+  height: 1px; background: var(--border); outline: none; cursor: pointer;
+}
+input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none; width: 12px; height: 12px;
+  background: var(--surface); border: 1.5px solid var(--text); transition: transform 0.1s;
+}
+input[type="range"]::-webkit-slider-thumb:hover { transform: scale(1.3); }
+
+.char-picker-top { display: flex; gap: 10px; align-items: center; margin-bottom: 10px; }
+
+.active-char {
+  width: 44px; height: 44px; flex-shrink: 0;
+  background: var(--text);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 22px; color: white; cursor: text; position: relative;
+}
+
+#charHiddenInput {
+  position: absolute; inset: 0; opacity: 0; width: 100%; height: 100%; cursor: text; font-size: 1px;
+}
+
+.active-char-info strong { font-size: 11.5px; font-weight: 600; display: block; margin-bottom: 2px; color: var(--text); }
+.active-char-info span   { font-size: 10.5px; color: var(--faint); line-height: 1.5; }
+
+.char-grid { display: grid; grid-template-columns: repeat(8, 1fr); gap: 2px; }
+
+.char-btn {
+  aspect-ratio: 1; border: 1px solid var(--border); background: var(--bg);
+  font-size: 11.5px; cursor: pointer; transition: all 0.08s;
+  display: flex; align-items: center; justify-content: center; color: var(--sub);
+}
+.char-btn:hover { border-color: var(--text); background: var(--surface); color: var(--text); }
+.char-btn.active { background: var(--text); color: white; border-color: var(--text); }
+
+.font-row { display: flex; flex-wrap: wrap; gap: 3px; margin-top: 9px; }
+
+.font-pill {
+  padding: 3px 8px; border: 1px solid var(--border);
+  font-size: 10.5px; font-weight: 500; cursor: pointer;
+  background: transparent; color: var(--sub);
+  font-family: 'DM Sans', sans-serif; transition: all 0.08s; letter-spacing: 0.02em;
+}
+.font-pill:hover { border-color: var(--text); color: var(--text); }
+.font-pill.active { background: var(--text); color: white; border-color: var(--text); }
+
+.preview-wrap { position: relative; margin-top: 10px; display: none; }
+.preview-wrap.visible { display: block; }
+
+.preview-canvas-wrap {
+  position: relative; width: 100%; height: 76px;
+  overflow: hidden; background: #0c0c0b;
+}
+
+#previewCanvas { width: 100%; height: 100%; object-fit: cover; display: block; }
+
+.preview-threshold-bar {
+  position: absolute; top: 0; bottom: 0; width: 1px;
+  background: rgba(255,50,50,0.8); pointer-events: none; transition: left 0.05s;
+}
+
+.preview-label {
+  font-size: 9px; font-weight: 600; letter-spacing: 0.1em;
+  text-transform: uppercase; color: var(--faint); margin-bottom: 5px;
+}
+
+.bw-row {
+  display: flex; align-items: center; justify-content: space-between; margin-bottom: 11px;
+}
+.bw-label { font-size: 11.5px; font-weight: 500; color: var(--sub); }
+.bw-toggle-wrap { display: flex; align-items: center; gap: 7px; }
+.bw-badge {
+  font-size: 8.5px; font-weight: 700; letter-spacing: 0.1em;
+  text-transform: uppercase; padding: 2px 5px;
+  background: var(--text); color: white; display: none;
+}
+.bw-badge.visible { display: inline-block; }
+
+.word-row { display: flex; gap: 4px; align-items: stretch; margin-top: 4px; margin-bottom: 12px; }
+.word-input-wrap { flex: 1; position: relative; }
+
+.word-input {
+  width: 100%; height: 32px;
+  border: 1px solid var(--border); background: var(--bg);
+  padding: 0 9px; font-family: 'DM Mono', monospace;
+  font-size: 12px; color: var(--text); outline: none; transition: border-color 0.12s;
+}
+.word-input:focus { border-color: var(--text); background: var(--surface); }
+.word-input::placeholder { color: var(--faint); font-family: 'DM Sans', sans-serif; font-size: 11px; }
+
+.case-btn {
+  width: 32px; height: 32px; flex-shrink: 0;
+  border: 1px solid var(--border); background: transparent;
+  font-size: 11.5px; font-weight: 700; color: var(--sub);
+  cursor: pointer; transition: all 0.12s;
+  display: flex; align-items: center; justify-content: center;
+  font-family: 'DM Sans', sans-serif;
+}
+.case-btn:hover { border-color: var(--text); color: var(--text); }
+.case-btn.upper { background: var(--text); color: white; border-color: var(--text); }
+
+.space-btn {
+  height: 32px; padding: 0 9px;
+  border: 1px solid var(--border); background: transparent;
+  font-size: 10px; font-weight: 600; color: var(--sub);
+  cursor: pointer; transition: all 0.12s;
+  display: flex; align-items: center; gap: 4px;
+  font-family: 'DM Sans', sans-serif;
+  letter-spacing: 0.04em; text-transform: uppercase; white-space: nowrap; flex-shrink: 0;
+}
+.space-btn:hover { border-color: var(--text); color: var(--text); }
+.space-btn.active { background: var(--text); color: white; border-color: var(--text); }
+.space-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+
+.word-chars { display: flex; flex-wrap: wrap; gap: 2px; margin-bottom: 10px; min-height: 0; }
+.word-char-chip {
+  width: 22px; height: 22px;
+  border: 1px solid var(--border); background: var(--bg);
+  display: flex; align-items: center; justify-content: center;
+  font-family: 'DM Mono', monospace; font-size: 10.5px; color: var(--sub);
+}
+.word-char-chip.space-chip { color: var(--faint); font-size: 8.5px; }
+
+input[type="color"] { position: absolute; opacity: 0; width: 0; height: 0; pointer-events: none; }
+
+/* ── Custom Colour Picker ── */
+.cp-wrap { padding-bottom: 12px; border-bottom: 1px solid var(--border); }
+.cp-wrap + .cp-wrap { padding-top: 12px; }
+
+.cp-header { display: flex; align-items: center; gap: 9px; cursor: pointer; user-select: none; }
+.cp-swatch { width: 24px; height: 24px; flex-shrink: 0; border: 1px solid var(--border); transition: border-color 0.12s; }
+.cp-header:hover .cp-swatch { border-color: var(--text); }
+.cp-header-info { flex: 1; }
+.cp-header-label { font-size: 11.5px; font-weight: 500; color: var(--sub); display: block; margin-bottom: 1px; }
+.cp-header-hex { font-family: 'DM Mono', monospace; font-size: 10px; color: var(--faint); }
+.cp-chevron { color: var(--faint); font-size: 9px; transition: transform 0.15s; flex-shrink: 0; }
+.cp-wrap.open .cp-chevron { transform: rotate(180deg); color: var(--sub); }
+
+.cp-body { display: none; padding-top: 10px; }
+.cp-wrap.open .cp-body { display: block; }
+
+.cp-top { display: flex; gap: 7px; margin-bottom: 10px; }
+.cp-preview { width: 46px; height: 46px; flex-shrink: 0; border: 1px solid var(--border); }
+.cp-palette {
+  flex: 1; display: grid; grid-template-columns: repeat(8, 1fr); gap: 2px; align-content: start;
+}
+.cp-pal-btn { aspect-ratio: 1; cursor: pointer; border: 1px solid rgba(0,0,0,0.05); transition: transform 0.07s; }
+.cp-pal-btn:hover { transform: scale(1.2); z-index: 2; position: relative; }
+.cp-pal-btn.cp-selected { outline: 1.5px solid var(--text); outline-offset: 0; }
+
+.cp-slider-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 9px; }
+.cp-slider-row:last-of-type { margin-bottom: 0; }
+
+.cp-slider-lbl {
+  font-size: 11.5px; font-weight: 500; color: var(--sub);
+  flex-shrink: 0; width: 34px; font-family: 'DM Sans', sans-serif;
+}
+.cp-slider-track-wrap {
+  flex: 1; margin: 0 8px; position: relative; height: 1px; background: var(--border);
+}
+.cp-slider-track-wrap input[type="range"] {
+  position: absolute; top: 50%; left: 0; transform: translateY(-50%);
+  width: 100%; -webkit-appearance: none;
+  height: 1px; background: transparent !important; outline: none; cursor: pointer; margin: 0;
+}
+.cp-slider-track-wrap input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none; width: 12px; height: 12px;
+  background: var(--surface); border: 1.5px solid var(--text); transition: transform 0.1s;
+}
+.cp-slider-track-wrap input[type="range"]::-webkit-slider-thumb:hover { transform: scale(1.3); }
+.cp-slider-track-wrap input[type="range"]::-webkit-slider-runnable-track { background: transparent; }
+
+.cp-val {
+  font-family: 'DM Mono', monospace; font-size: 10px; color: var(--faint);
+  background: var(--bg); padding: 1px 5px; flex-shrink: 0; min-width: 32px; text-align: right;
+}
+
+.cp-sep { height: 1px; background: var(--border); margin: 9px 0 8px; }
+
+.cp-hex-row { display: flex; align-items: center; gap: 5px; margin-top: 9px; }
+.cp-hex-hash { font-family: 'DM Mono', monospace; font-size: 12px; color: var(--faint); }
+.cp-hex-field {
+  flex: 1; height: 26px;
+  border: 1px solid var(--border); background: var(--bg);
+  padding: 0 7px; font-family: 'DM Mono', monospace;
+  font-size: 11px; color: var(--text); outline: none;
+  letter-spacing: 0.07em; text-transform: uppercase;
+}
+.cp-hex-field:focus { border-color: var(--text); background: var(--surface); }
+
+.toggle-row {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 8px 0; border-bottom: 1px solid var(--border);
+}
+.toggle-row:last-of-type { border-bottom: none; }
+
+.toggle-info strong { display: block; font-size: 11.5px; font-weight: 500; margin-bottom: 1px; color: var(--text); }
+.toggle-info span   { font-size: 10px; color: var(--faint); }
+
+.toggle { position: relative; width: 32px; height: 18px; flex-shrink: 0; }
+.toggle input { opacity: 0; width: 0; height: 0; }
+.toggle-track {
+  position: absolute; inset: 0;
+  background: var(--border); cursor: pointer; transition: background 0.18s;
+}
+.toggle-track::after {
+  content: ''; position: absolute; left: 2px; top: 2px;
+  width: 14px; height: 14px; background: var(--surface); transition: left 0.18s;
+}
+.toggle input:checked + .toggle-track { background: var(--text); }
+.toggle input:checked + .toggle-track::after { left: 16px; }
+
+.mode-badge {
+  display: inline-block; margin-top: 2px;
+  font-size: 8.5px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase;
+  padding: 1px 5px; border: 1px solid var(--border); color: var(--faint);
+}
+
+.gradient-config { display: none; margin-top: 10px; }
+.gradient-config.visible { display: block; }
+
+.grad-strip { height: 16px; border: 1px solid var(--border); margin-bottom: 9px; }
+
+/* ── Gradient Editor ── */
+.ge-bar-row {
+  display: flex; align-items: center; gap: 0; margin-bottom: 10px;
+}
+.ge-handle {
+  width: 24px; height: 24px; flex-shrink: 0;
+  border: 2px solid var(--border); cursor: pointer;
+  transition: border-color 0.12s, transform 0.12s;
+  position: relative; z-index: 1;
+}
+.ge-handle:hover { border-color: var(--sub); }
+.ge-handle.ge-active {
+  border: 2px solid var(--text);
+  transform: scale(1.15);
+  z-index: 2;
+}
+.ge-bar {
+  flex: 1; height: 24px;
+}
+.ge-picker {
+  padding-top: 10px;
+}
+.ge-pal {
+  display: grid; grid-template-columns: repeat(8, 1fr);
+  gap: 2px; margin-bottom: 10px;
+}
+.ge-pal .cp-pal-btn {
+  aspect-ratio: 1; cursor: pointer;
+  border: 1px solid rgba(0,0,0,0.05); transition: transform 0.07s;
+}
+.ge-pal .cp-pal-btn:hover { transform: scale(1.2); z-index: 2; position: relative; }
+.ge-pal .cp-pal-btn.cp-selected { outline: 1.5px solid var(--text); outline-offset: 0; }
+
+.grad-colors { display: flex; gap: 5px; margin-bottom: 9px; }
+.grad-colors .cp-wrap { flex: 1; border-bottom: none; padding-bottom: 0; }
+
+.grad-color-btn {
+  flex: 1; border: 1px solid var(--border);
+  padding: 6px 8px; background: transparent; cursor: pointer;
+  display: flex; align-items: center; gap: 5px;
+  font-size: 10.5px; font-family: 'DM Mono', monospace; transition: border-color 0.1s;
+}
+.grad-color-btn:hover { border-color: var(--text); }
+.grad-swatch { width: 14px; height: 14px; border: 1px solid var(--border); flex-shrink: 0; }
+
+.sub-label {
+  font-size: 9px; color: var(--faint); font-weight: 600;
+  letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 5px;
+}
+
+.blend-row { margin-top: 8px; }
+
+.dir-row { display: flex; gap: 3px; }
+
+.dir-btn {
+  flex: 1; height: 26px;
+  border: 1px solid var(--border); background: transparent;
+  font-size: 12px; cursor: pointer; transition: all 0.08s; color: var(--sub);
+}
+.dir-btn:hover { border-color: var(--text); color: var(--text); }
+.dir-btn.active { background: var(--text); color: white; border-color: var(--text); }
+
+.lgm-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 3px; margin-top: 5px; }
+.lgm-btn {
+  padding: 5px 4px; border: 1px solid var(--border); background: transparent;
+  font-size: 10px; font-weight: 500; cursor: pointer; transition: all 0.08s;
+  color: var(--sub); font-family: 'DM Sans', sans-serif;
+}
+.lgm-btn:hover { border-color: var(--text); color: var(--text); }
+.lgm-btn.active { background: var(--text); color: white; border-color: var(--text); }
+
+.imgcolor-grad-config { display: none; margin-top: 10px; }
+.imgcolor-grad-config.visible { display: block; }
+
+.ext-color-zone {
+  position: relative; height: 60px; cursor: pointer;
+  background: var(--bg); border: 1px dashed var(--border-mid);
+  overflow: hidden; margin-bottom: 7px; transition: border-color 0.15s;
+}
+.ext-color-zone:hover { border-color: var(--text); }
+.ext-color-zone input[type="file"] { position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%; z-index: 10; }
+.ext-color-zone .upload-content { min-height: 60px; gap: 2px; }
+.ext-color-zone .upload-icon { font-size: 14px; }
+.ext-color-zone .upload-text { font-size: 10.5px; font-weight: 500; color: var(--sub); }
+
+.ext-color-loaded {
+  display: none; align-items: center; gap: 8px;
+  margin-bottom: 7px; padding: 6px 8px;
+  border: 1px solid var(--border); background: var(--bg);
+}
+.ext-color-loaded.visible { display: flex; }
+.ext-color-thumb { width: 36px; height: 36px; object-fit: cover; flex-shrink: 0; border: 1px solid var(--border); }
+.ext-color-info { flex: 1; min-width: 0; }
+.ext-color-filename { font-size: 10.5px; font-weight: 500; color: var(--text); display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; margin-bottom: 3px; }
+.ext-color-clear {
+  width: 22px; height: 22px; flex-shrink: 0;
+  border: 1px solid var(--border); background: transparent; color: var(--faint);
+  font-size: 10px; cursor: pointer; transition: all 0.1s;
+  display: flex; align-items: center; justify-content: center;
+}
+.ext-color-clear:hover { border-color: var(--text); color: var(--text); }
+.ext-color-hint { font-size: 9.5px; color: var(--faint); line-height: 1.5; }
+
+.extcolor-config { display: none; margin-top: 10px; }
+.extcolor-config.visible { display: block; }
+
+.heatmap-config { display: none; margin-top: 10px; }
+.heatmap-config.visible { display: block; }
+
+.heatmap-strip { height: 16px; border: 1px solid var(--border); margin-bottom: 9px; }
+
+.heatmap-presets { display: grid; grid-template-columns: repeat(3, 1fr); gap: 3px; margin-bottom: 9px; }
+
+.heatmap-preset-btn {
+  border: 1px solid var(--border); background: var(--surface);
+  cursor: pointer; padding: 0; overflow: hidden;
+  transition: border-color 0.1s; height: 28px; display: flex; flex-direction: column;
+}
+.heatmap-preset-btn:hover { border-color: var(--text); }
+.heatmap-preset-btn.active { border: 2px solid var(--active-bg); }
+.heatmap-preset-bar { flex: 1; display: block; }
+.heatmap-preset-label {
+  font-size: 8px; font-weight: 600; letter-spacing: 0.06em;
+  color: var(--sub); text-align: center; padding: 2px 0;
+  text-transform: uppercase; background: var(--surface); border-top: 1px solid var(--border);
+}
+
+.canvas-area {
+  display: flex; align-items: center; justify-content: center;
+  position: relative; overflow: auto; background: var(--bg); height: 100%;
+}
+
+.canvas-frame {
+  position: relative; z-index: 1; overflow: hidden;
+  box-shadow: 0 1px 12px rgba(0,0,0,0.07), 0 0 0 1px rgba(0,0,0,0.06);
+  flex-shrink: 0; display: flex;
+}
+
+.canvas-placeholder {
+  width: 540px; height: 400px;
+  background: var(--surface); border: 1px solid var(--border);
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center; gap: 7px;
+}
+.placeholder-icon { font-size: 28px; opacity: 0.15; }
+.placeholder-text { font-size: 12.5px; font-weight: 500; color: var(--sub); }
+.placeholder-sub  { font-size: 10px; color: var(--faint); letter-spacing: 0.07em; text-transform: uppercase; }
+
+canvas { display: none; max-width: calc(100vw - var(--panel-w) - 80px); max-height: calc(100vh - 90px); }
+canvas.visible { display: block; }
+
+.canvas-hint { position: absolute; bottom: 14px; right: 18px; font-size: 10px; color: var(--faint); z-index: 2; pointer-events: none; letter-spacing: 0.04em; text-transform: uppercase; }
+
+#sourceImg { display: none; }
+
+@media (max-width: 860px) {
+  .workspace { grid-template-columns: 1fr; grid-template-rows: auto 1fr; overflow-y: auto; }
+  .panel { max-height: none; height: auto; border-right: none; border-bottom: 1px solid var(--border); }
+  .canvas-area { min-height: 50vh; height: auto; overflow: visible; }
+  canvas { max-width: 100%; max-height: none; }
+}
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="nav-brand">
+    <svg class="brand-svg" viewBox="0 0 1587 604" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <path d="M825.127 -0.000145464C842.397 -0.000145464 854.04 3.27054 860.058 9.81192C866.076 16.3533 869.085 29.3052 869.085 48.6676V77.3188C869.085 92.2331 865.946 103.092 859.666 109.895C856.526 113.296 852.339 116.567 847.106 119.707C842.135 122.847 835.986 126.641 828.66 131.089L741.921 185.251V267.673H767.433V294.361H685.011V267.673H709.738V27.0811H685.011V-0.000145464H825.127ZM840.434 27.0811H741.921V153.853L840.434 93.0181V27.0811ZM945.521 267.673H971.033V294.361H888.611V267.673H913.338V124.809H888.611V98.1204H945.521V267.673ZM929.429 25.9037C934.924 25.9037 939.503 27.9969 943.166 32.1834C947.091 36.1082 949.054 40.9488 949.054 46.7052C949.054 52.2 947.091 56.9098 943.166 60.8346C939.503 64.4977 934.793 66.3293 929.037 66.3293C923.542 66.3293 918.832 64.4977 914.908 60.8346C911.244 56.9098 909.413 52.2 909.413 46.7052C909.413 40.9488 911.375 36.1082 915.3 32.1834C919.225 27.9969 923.935 25.9037 929.429 25.9037ZM1004.71 267.673L1054.16 192.709L1009.03 124.809H985.87V98.1204H1023.55L1071.43 168.767L1116.17 98.1204H1154.64V124.809H1132.66L1087.52 192.709L1136.58 267.673H1158.56V294.361H1121.67L1071.43 216.257L1021.59 294.361H982.73V267.673H1004.71ZM1166.34 136.584C1166.34 110.68 1179.81 97.7279 1206.76 97.7279H1273.09C1285.91 97.7279 1295.2 100.214 1300.96 105.185C1306.72 110.156 1309.59 119.314 1309.59 132.659V169.16L1197.74 239.806V267.673H1278.59V244.909H1309.59V265.71C1309.59 273.56 1307.11 280.363 1302.14 286.119C1297.43 291.614 1289.45 294.361 1278.2 294.361H1197.74C1186.49 294.361 1178.37 291.614 1173.4 286.119C1168.69 280.363 1166.34 273.56 1166.34 265.71V136.584ZM1197.74 208.015L1278.2 157.385V124.809H1197.74V208.015ZM1382.14 267.673H1407.65V294.361H1325.23V267.673H1349.96V26.6886H1325.23V-0.000145464H1382.14V267.673ZM937.616 399.868V482.289H910.928V454.423H855.588V566.673H956.063V520.752H982.752V593.361H798.678V566.673H823.404V325.689H798.678V299H982.752V371.609H956.063V325.689H855.588V427.734H910.928V399.868H937.616ZM1168.39 566.673V593.361H1031.81C1018.46 593.361 1009.43 590.745 1004.72 585.512C1000.54 580.802 998.445 571.906 998.445 558.823V544.301C998.445 534.882 999.622 528.471 1001.98 525.069C1005.38 520.098 1013.1 513.949 1025.13 506.623L1111.48 452.853V423.809H1034.55V446.573H1009.43V397.12H1107.55C1120.9 397.12 1130.19 399.999 1135.42 405.755C1140.92 411.511 1143.66 419.884 1143.66 430.874V566.673H1168.39ZM1111.48 484.251L1029.84 535.274V566.673H1111.48V484.251ZM1220.26 325.689V397.12H1252.05V425.379H1220.26V566.673H1257.55V593.361H1224.58C1212.8 593.361 1204.04 590.352 1198.28 584.334C1192.53 578.055 1189.65 567.458 1189.65 552.543V425.379H1160.6V397.12H1189.65V325.689H1220.26ZM1265.55 435.584C1265.55 409.68 1279.02 396.728 1305.97 396.728H1372.3C1385.12 396.728 1394.41 399.214 1400.17 404.185C1405.93 409.156 1408.8 418.314 1408.8 431.659V468.16L1296.95 538.806V566.673H1377.8V543.909H1408.8V564.71C1408.8 572.56 1406.32 579.363 1401.35 585.119C1396.64 590.614 1388.66 593.361 1377.4 593.361H1296.95C1285.69 593.361 1277.58 590.614 1272.61 585.119C1267.9 579.363 1265.55 572.56 1265.55 564.71V435.584ZM1296.95 507.015L1377.4 456.385V423.809H1296.95V507.015ZM1539.44 397.12C1559.85 397.12 1570.05 407.194 1570.05 427.341V462.272H1538.26V424.202L1477.03 463.057V566.673H1496.27V593.361H1420.52V566.673H1445.24V423.417H1420.52V396.728H1477.03V431.266L1525.31 401.045C1529.5 398.429 1534.21 397.12 1539.44 397.12Z" fill="currentColor"/>
+    <mask id="pe_mask_icon" style="mask-type:alpha" maskUnits="userSpaceOnUse" x="0" y="5" width="588" height="589">
+      <path d="M588 107.107H498.352V198.073H434.197V296.698H483.031V395.323H548.143V493.949H588V593.361H0V5.36133H588V107.107Z" fill="currentColor"/>
+    </mask>
+    <g mask="url(#pe_mask_icon)">
+      <rect x="-1.19531" y="36.9561" width="150.72" height="150.72" fill="currentColor"/>
+      <rect x="169.547" y="36.9561" width="150.72" height="150.72" fill="currentColor"/>
+      <rect x="340.281" y="36.9561" width="150.72" height="150.72" fill="currentColor"/>
+      <rect x="511.023" y="36.9561" width="150.72" height="150.72" fill="currentColor"/>
+      <rect x="-1.19531" y="223.001" width="150.72" height="150.72" fill="currentColor"/>
+      <rect x="169.547" y="223.001" width="150.72" height="150.72" fill="currentColor"/>
+      <rect x="340.281" y="223.001" width="150.72" height="150.72" fill="currentColor"/>
+      <rect x="511.023" y="223.001" width="150.72" height="150.72" fill="currentColor"/>
+      <rect x="-1.19531" y="409.046" width="150.72" height="150.72" fill="currentColor"/>
+      <rect x="169.547" y="409.046" width="150.72" height="150.72" fill="currentColor"/>
+      <rect x="340.281" y="409.046" width="150.72" height="150.72" fill="currentColor"/>
+      <rect x="511.023" y="409.046" width="150.72" height="150.72" fill="currentColor"/>
+    </g>
+  </svg>
+  </div>
+  <div class="nav-right">
+    <button class="btn-ghost btn-dark-toggle" id="darkModeBtn" title="Toggle dark mode">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+    </button>
+    <button class="btn-invert" id="invertBtn">Invert</button>
+    <button class="btn-ghost" id="resetAllBtn">Reset</button>
+    <button class="btn-primary" id="downloadSvgBtn" disabled>Export SVG</button>
+    <button class="btn-primary" id="downloadBtn" disabled>Export PNG</button>
+  </div>
+</nav>
+
+<div class="workspace">
+
+  <!-- ── Panel ── -->
+  <aside class="panel">
+    <div class="panel-inner">
+
+      <!-- Image -->
+      <div class="section-block">
+        <div class="section-top"><span class="section-label">Image</span></div>
+        <div class="upload-card" id="uploadZone">
+          <input type="file" id="fileInput" accept="image/*">
+          <div class="upload-overlay"></div>
+          <div class="upload-content">
+            <div class="upload-icon">◧</div>
+            <div class="upload-text">Drop image here</div>
+            <div class="upload-sub">JPG · PNG · WebP · GIF</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Effect Settings -->
+      <div class="section-block">
+        <div class="section-top">
+          <span class="section-label">Effect Settings</span>
+          <button class="section-reset" id="resetSettingsBtn">Reset</button>
+        </div>
+
+        <!-- Image preview (hidden until image loaded) -->
+        <div class="preview-wrap" id="previewWrap">
+          <div class="preview-label">Source Preview</div>
+          <div class="preview-canvas-wrap">
+            <canvas id="previewCanvas"></canvas>
+            <div class="preview-threshold-bar" id="previewThresholdBar" title="Threshold: pixels left of line get drawn"></div>
+          </div>
+        </div>
+
+        <div class="ctrl" style="margin-top:12px;">
+          <div class="ctrl-label">Glyph Size <span class="ctrl-val" id="dotSizeVal">14</span></div>
+          <input type="range" id="dotSize" min="6" max="60" value="14" step="1">
+        </div>
+        <div class="ctrl">
+          <div class="ctrl-label">Spacing <span class="ctrl-val" id="spacingVal">16</span></div>
+          <input type="range" id="spacing" min="1" max="70" value="16" step="1">
+        </div>
+        <div class="ctrl">
+          <div class="ctrl-label">Threshold <span class="ctrl-val" id="thresholdVal">128</span></div>
+          <input type="range" id="threshold" min="0" max="255" value="128" step="1">
+        </div>
+        <div class="ctrl">
+          <div class="ctrl-label">Contrast <span class="ctrl-val" id="contrastVal">0</span></div>
+          <input type="range" id="contrast" min="-100" max="100" value="0" step="5">
+        </div>
+        <div class="ctrl">
+          <div class="ctrl-label">Hue <span class="ctrl-val" id="hueVal">0</span>°</div>
+          <input type="range" id="hueShift" min="-180" max="180" value="0" step="1">
+        </div>
+        <div class="ctrl">
+          <div class="ctrl-label">Saturation <span class="ctrl-val" id="satVal">0</span></div>
+          <input type="range" id="satShift" min="-100" max="100" value="0" step="1">
+        </div>
+
+        <!-- B&W Mode -->
+        <div class="bw-row">
+          <div class="bw-label">B&amp;W Mode <span class="bw-badge" id="bwBadge">ON</span></div>
+          <div class="bw-toggle-wrap">
+            <label class="toggle">
+              <input type="checkbox" id="bwToggle">
+              <span class="toggle-track"></span>
+            </label>
+          </div>
+        </div>
+      </div>
+
+      <!-- Character -->
+      <div class="section-block">
+        <div class="section-top">
+          <span class="section-label">Character</span>
+          <button class="case-btn" id="caseBtn" title="Toggle uppercase / lowercase">Aa</button>
+        </div>
+
+        <!-- Word / phrase input -->
+        <div class="word-row">
+          <div class="word-input-wrap">
+            <input type="text" class="word-input" id="wordInput" placeholder="Type a word or phrase…" maxlength="80" autocomplete="off" spellcheck="false">
+          </div>
+          <button class="space-btn" id="spaceEvenBtn" title="Divide canvas into equal columns per letter" disabled>⇿ Even</button>
+        </div>
+
+        <!-- Live char chips preview -->
+        <div class="word-chars" id="wordChars"></div>
+
+        <!-- Single-char presets -->
+        <div class="char-picker-top">
+          <div class="active-char" id="charDisplay" title="Click to type any single character">
+            <span id="charPreview">A</span>
+            <input type="text" id="charHiddenInput" autocomplete="off" spellcheck="false" tabindex="0">
+          </div>
+          <div class="active-char-info">
+            <strong>Single Glyph</strong>
+            <span>Click box or pick a preset.<br>Word input overrides this.</span>
+          </div>
+        </div>
+        <div class="char-grid" id="charGrid"></div>
+
+        <div class="font-row">
+          <button class="font-pill active" data-font="monospace">Mono</button>
+          <button class="font-pill" data-font="serif">Serif</button>
+          <button class="font-pill" data-font="sans-serif">Sans</button>
+          <button class="font-pill" data-font="'Bebas Neue', cursive">Bebas</button>
+          <button class="font-pill" data-font="Impact, fantasy">Impact</button>
+          <button class="font-pill" data-font="'Instrument Serif', serif">Instrument</button>
+        </div>
+      </div>
+
+      <!-- ── Color Section ── -->
+      <div class="section-block">
+        <div class="section-top"><span class="section-label">Color</span></div>
+
+        <!-- Hidden color inputs (kept for render compatibility) -->
+        <input type="color" id="pageColor" value="#f9f9f7">
+        <input type="color" id="inkColor" value="#1a1a1a">
+
+        <!-- Page Colour picker -->
+        <div class="cp-wrap" id="pageColorWrap"></div>
+
+        <!-- Ink Colour picker (hidden when a colour-map mode is on) -->
+        <div class="cp-wrap" id="inkRow"></div>
+
+        <!-- Image Color Map toggle -->
+        <div class="toggle-row">
+          <div class="toggle-info">
+            <strong>Image Color Map</strong>
+            <span>Glyphs inherit original photo colours</span>
+            <div class="mode-badge">Photorealistic</div>
+          </div>
+          <label class="toggle">
+            <input type="checkbox" id="imgColorToggle">
+            <span class="toggle-track"></span>
+          </label>
+        </div>
+
+        <!-- Image Color Map sub-options -->
+        <div class="imgcolor-grad-config" id="imgColorGradConfig"></div>
+
+        <!-- ── Colour from Image toggle ── -->
+        <div class="toggle-row" id="extColorToggleRow">
+          <div class="toggle-info">
+            <strong>Colour from Image</strong>
+            <span>Map a separate image's colours onto the effect</span>
+          </div>
+          <label class="toggle">
+            <input type="checkbox" id="extColorToggle">
+            <span class="toggle-track"></span>
+          </label>
+        </div>
+
+        <!-- Colour from Image sub-section -->
+        <div class="extcolor-config" id="extColorConfig">
+          <!-- Upload zone — shown until an image is loaded -->
+          <div class="ext-color-zone" id="extColorZone">
+            <input type="file" id="extColorInput" accept="image/*">
+            <div class="upload-overlay"></div>
+            <div class="upload-content">
+              <div class="upload-icon">🎨</div>
+              <div class="upload-text">Drop colour image here</div>
+            </div>
+          </div>
+          <!-- Loaded state -->
+          <div class="ext-color-loaded" id="extColorLoaded">
+            <img class="ext-color-thumb" id="extColorThumb" alt="">
+            <div class="ext-color-info">
+              <span class="ext-color-filename" id="extColorFilename"></span>
+              <div class="ext-color-hint">Pixel colours from this image are mapped onto every glyph</div>
+            </div>
+            <button class="ext-color-clear" id="extColorClear">✕</button>
+          </div>
+          <!-- Opacity blend -->
+          <div class="blend-row" id="extColorBlendRow" style="display:none; margin-top:8px;">
+            <div class="ctrl-label">Opacity <span class="ctrl-val" id="extColorOpacityVal">100</span>%</div>
+            <input type="range" id="extColorOpacity" min="0" max="100" value="100" step="1">
+          </div>
+        </div>
+
+        <!-- ── Heat Map toggle ── -->
+        <div class="toggle-row">
+          <div class="toggle-info">
+            <strong>Heat Map</strong>
+            <span>Colour glyphs by luminance through a colour ramp</span>
+          </div>
+          <label class="toggle">
+            <input type="checkbox" id="heatmapToggle">
+            <span class="toggle-track"></span>
+          </label>
+        </div>
+
+        <!-- Heat Map sub-section -->
+        <div class="heatmap-config" id="heatmapConfig">
+          <div class="heatmap-strip" id="heatmapStrip"></div>
+          <div class="heatmap-presets" id="heatmapPresets"></div>
+        </div>
+
+        <!-- Canvas + Letter Gradient toggles (only when imgColor/extColor is OFF) -->
+        <div id="nonImgColorToggles">
+
+          <!-- Canvas Gradient -->
+          <div class="toggle-row">
+            <div class="toggle-info">
+              <strong>Canvas Gradient</strong>
+              <span>Gradient across whole image</span>
+            </div>
+            <label class="toggle">
+              <input type="checkbox" id="canvasGradToggle">
+              <span class="toggle-track"></span>
+            </label>
+          </div>
+          <!-- Canvas config — immediately below its toggle -->
+          <div id="canvasGradColors" style="display:none; padding:10px 0 6px;">
+            <div id="canvasGradEditor"></div>
+            <input type="color" id="canvasGradFrom" value="#6ee7b7">
+            <input type="color" id="canvasGradTo" value="#3b82f6">
+            <div id="dirSection" style="margin-top:10px;">
+              <div class="sub-label">Direction</div>
+              <div class="dir-row">
+                <button class="dir-btn active" data-dir="horizontal">→</button>
+                <button class="dir-btn" data-dir="vertical">↓</button>
+                <button class="dir-btn" data-dir="diagonal">↘</button>
+                <button class="dir-btn" data-dir="radial">◎</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Per-Letter Gradient -->
+          <div class="toggle-row">
+            <div class="toggle-info">
+              <strong>Per-Letter Gradient</strong>
+              <span>Gradient inside each glyph</span>
+            </div>
+            <label class="toggle">
+              <input type="checkbox" id="letterGradToggle">
+              <span class="toggle-track"></span>
+            </label>
+          </div>
+          <!-- Letter config — immediately below its toggle -->
+          <div id="letterGradColors" style="display:none; padding:10px 0 6px;">
+            <div id="letterGradEditor"></div>
+            <input type="color" id="gradFrom" value="#ff6ec7">
+            <input type="color" id="gradTo" value="#a78bfa">
+            <div id="letterGradModeSection" style="margin-top:10px;">
+              <div class="sub-label">Letter direction</div>
+              <div class="lgm-grid">
+                <button class="lgm-btn active" data-lgm="horizontal">Left → Right</button>
+                <button class="lgm-btn" data-lgm="vertical">Top → Bottom</button>
+                <button class="lgm-btn" data-lgm="diagonal">Diagonal</button>
+                <button class="lgm-btn" data-lgm="radial">Radial</button>
+              </div>
+            </div>
+          </div>
+
+        </div><!-- end nonImgColorToggles -->
+
+        <!-- ── Gradient Overlay (standalone, always visible when image loaded) ── -->
+        <div class="toggle-row" id="gradOverlayToggleRow">
+          <div class="toggle-info">
+            <strong>Gradient Overlay</strong>
+            <span>Overlay a colour gradient on the output</span>
+          </div>
+          <label class="toggle">
+            <input type="checkbox" id="gradOverlayToggle">
+            <span class="toggle-track"></span>
+          </label>
+        </div>
+        <div class="gradient-config" id="gradOverlayConfig" style="display:none; padding-top:10px;">
+          <div id="overlayGradEditor"></div>
+          <!-- hidden inputs for render compat -->
+          <input type="color" id="imgGradFrom" value="#6ee7b7">
+          <input type="color" id="imgGradTo" value="#a78bfa">
+          <div class="blend-row" style="margin-top:10px;">
+            <div class="ctrl-label">Opacity <span class="ctrl-val" id="imgGradBlendVal">40</span>%</div>
+            <input type="range" id="imgGradBlend" min="0" max="100" value="40" step="1">
+          </div>
+          <div style="margin-top:10px;">
+            <div class="sub-label">Direction</div>
+            <div class="dir-row">
+              <button class="dir-btn img-dir-btn active" data-dir="horizontal">→</button>
+              <button class="dir-btn img-dir-btn" data-dir="vertical">↓</button>
+              <button class="dir-btn img-dir-btn" data-dir="diagonal">↘</button>
+              <button class="dir-btn img-dir-btn" data-dir="radial">◎</button>
+            </div>
+          </div>
+        </div>
+
+    </div><!-- end panel-inner -->
+  </aside>
+
+  <!-- ── Canvas ── -->
+  <main class="canvas-area">
+    <div class="canvas-frame">
+      <div class="canvas-placeholder" id="placeholder">
+        <div class="placeholder-icon">◧</div>
+        <div class="placeholder-text">Upload an image to begin</div>
+        <div class="placeholder-sub">Supports JPG, PNG, WebP, GIF</div>
+      </div>
+      <canvas id="outputCanvas"></canvas>
+    </div>
+    <img id="sourceImg" crossorigin="anonymous">
+    <div class="canvas-hint">right-click canvas to save</div>
+  </main>
+
+</div>
+
+<script>
+// ── Defaults ────────────────────────────────────────────────────
+const DEFAULTS = {
+  dotSize: 14, spacing: 16, threshold: 128, contrast: 0,
+  inkColor: '#1a1a1a', pageColor: '#f9f9f7',
+  char: 'A', font: 'monospace',
+  imgColor: false,
+  imgGradFrom: '#6ee7b7', imgGradTo: '#a78bfa', imgGradBlend: 0, imgGradDir: 'horizontal',
+  canvasGrad: false, letterGrad: false,
+  gradFrom: '#ff6ec7', gradTo: '#a78bfa',
+  canvasGradFrom: '#6ee7b7', canvasGradTo: '#3b82f6',
+  dir: 'horizontal', lgm: 'horizontal',
+};
+
+const SETTING_DEFAULTS = { dotSize: 14, spacing: 16, threshold: 128, contrast: 0, hue: 0, sat: 0 };
+
+const PRESETS = [
+  'A','B','C','D','E','F','G','H',
+  'I','J','K','L','M','N','O','P',
+  'Q','R','S','T','U','V','W','X',
+  'Y','Z','0','1','2','3','#','@',
+  '*','•','▲','■','◆','✦','♠','♥'
+];
+
+// ── State ───────────────────────────────────────────────────────
+let currentChar   = DEFAULTS.char;
+let currentFont   = DEFAULTS.font;
+let currentDir    = DEFAULTS.dir;
+let currentLGM    = DEFAULTS.lgm;
+let currentImgDir = DEFAULTS.imgGradDir;
+let currentWord   = '';
+let isUpperCase   = true;
+let spaceEvenly   = false;
+let invertActive  = false;
+let bwMode        = false;
+let glyphSeq      = ['A'];
+let svgGlyphs     = []; // collected each render for vector export
+let hasImage      = false;
+let renderTimer   = null;
+
+// External colour-image state
+let extColorData  = null; // raw pixel array from the colour image
+let extColorW     = 0;
+let extColorH     = 0;
+
+// Heat map state
+let currentHeatmap = 'thermal';
+
+// ── DOM ─────────────────────────────────────────────────────────
+const $ = id => document.getElementById(id);
+
+const fileInput             = $('fileInput');
+const uploadZone            = $('uploadZone');
+const sourceImg             = $('sourceImg');
+const canvas                = $('outputCanvas');
+const ctx                   = canvas.getContext('2d');
+const placeholder           = $('placeholder');
+const downloadBtn           = $('downloadBtn');
+const downloadSvgBtn        = $('downloadSvgBtn');
+const resetAllBtn           = $('resetAllBtn');
+const resetSettingsBtn      = $('resetSettingsBtn');
+const invertBtn             = $('invertBtn');
+const previewCanvas         = $('previewCanvas');
+const previewWrap           = $('previewWrap');
+const bwToggle              = $('bwToggle');
+const bwBadge               = $('bwBadge');
+const extColorToggle        = $('extColorToggle');
+const extColorInput         = $('extColorInput');
+const extColorZone          = $('extColorZone');
+const extColorConfig        = $('extColorConfig');
+const extColorLoaded        = $('extColorLoaded');
+const extColorThumb         = $('extColorThumb');
+const extColorFilename      = $('extColorFilename');
+const extColorClear         = $('extColorClear');
+const heatmapToggle         = $('heatmapToggle');
+const heatmapConfig         = $('heatmapConfig');
+
+// ── Embed logo ────────────────────────────────────────────────────
+(function() {
+
+})();
+const charDisplay           = $('charDisplay');
+const charHiddenInput       = $('charHiddenInput');
+const charPreview           = $('charPreview');
+const wordInput             = $('wordInput');
+const wordChars             = $('wordChars');
+const caseBtn               = $('caseBtn');
+const spaceEvenBtn          = $('spaceEvenBtn');
+const imgColorToggle        = $('imgColorToggle');
+const imgColorGradConfig    = $('imgColorGradConfig');
+const nonImgColorToggles    = $('nonImgColorToggles');
+const inkRow                = $('inkRow');
+const canvasGradToggle      = $('canvasGradToggle');
+const letterGradToggle      = $('letterGradToggle');
+const dirSection            = $('dirSection');
+const letterGradModeSection = $('letterGradModeSection');
+
+const C = {
+  dotSize:      $('dotSize'),
+  spacing:      $('spacing'),
+  threshold:    $('threshold'),
+  contrast:     $('contrast'),
+  inkColor:     $('inkColor'),
+  pageColor:    $('pageColor'),
+  gradFrom:     $('gradFrom'),
+  gradTo:       $('gradTo'),
+  canvasGradFrom: $('canvasGradFrom'),
+  canvasGradTo:   $('canvasGradTo'),
+  imgGradFrom:  $('imgGradFrom'),
+  imgGradTo:    $('imgGradTo'),
+  imgGradBlend: $('imgGradBlend'),
+};
+
+// ── Glyph sequence resolver ──────────────────────────────────────
+function resolveGlyphSeq() {
+  const raw = currentWord.trim();
+  let seq;
+  if(raw.length > 0) {
+    seq = Array.from(raw).filter(c => c.trim() !== '');
+    if(seq.length === 0) seq = [currentChar];
+  } else {
+    seq = [currentChar];
+    spaceEvenly = false;
+    spaceEvenBtn.classList.remove('active');
+  }
+  // Apply case
+  glyphSeq = seq.map(c => isUpperCase ? c.toUpperCase() : c.toLowerCase());
+  charPreview.textContent = glyphSeq[0];
+
+  // Space-evenly only makes sense with a word
+  const hasWord = raw.length > 0 && glyphSeq.length > 1;
+  spaceEvenBtn.disabled = !hasWord;
+  if(!hasWord) { spaceEvenly = false; spaceEvenBtn.classList.remove('active'); }
+
+  renderWordChips(raw);
+}
+
+function renderWordChips(raw) {
+  wordChars.innerHTML = '';
+  if(raw.length === 0) return;
+  Array.from(raw).forEach((c, i) => {
+    const chip = document.createElement('div');
+    if(c === ' ') {
+      chip.className = 'word-char-chip space-chip';
+      chip.textContent = 'sp';
+    } else {
+      chip.className = 'word-char-chip';
+      chip.textContent = isUpperCase ? c.toUpperCase() : c.toLowerCase();
+    }
+    wordChars.appendChild(chip);
+  });
+}
+
+// ── Char Grid ───────────────────────────────────────────────────
+const grid = $('charGrid');
+PRESETS.forEach(ch => {
+  const btn = document.createElement('button');
+  btn.className = 'char-btn' + (ch === 'A' ? ' active' : '');
+  btn.textContent = ch;
+  btn.addEventListener('click', () => {
+    grid.querySelectorAll('.char-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    currentChar = ch.slice(0,1) || 'A';
+    wordInput.value = ''; // clear word when picking single char
+    currentWord = '';
+    resolveGlyphSeq();
+    scheduleRender();
+  });
+  grid.appendChild(btn);
+});
+
+function setChar(ch) {
+  currentChar = ch.slice(0,1) || 'A';
+  wordInput.value = '';
+  currentWord = '';
+  resolveGlyphSeq();
+  scheduleRender();
+}
+
+charDisplay.addEventListener('click', () => charHiddenInput.focus());
+charHiddenInput.addEventListener('keydown', e => {
+  if(e.key.length === 1) {
+    grid.querySelectorAll('.char-btn').forEach(b => b.classList.remove('active'));
+    setChar(e.key);
+    e.preventDefault();
+  }
+});
+
+// ── Word Input ──────────────────────────────────────────────────
+wordInput.addEventListener('input', () => {
+  currentWord = wordInput.value;
+  // deselect char grid if word is non-empty
+  if(currentWord.trim().length > 0) {
+    grid.querySelectorAll('.char-btn').forEach(b => b.classList.remove('active'));
+  } else {
+    // re-highlight current single char
+    grid.querySelectorAll('.char-btn').forEach(b => b.classList.toggle('active', b.textContent === currentChar));
+  }
+  resolveGlyphSeq();
+  scheduleRender();
+});
+
+// ── Case Toggle ─────────────────────────────────────────────────
+caseBtn.addEventListener('click', () => {
+  isUpperCase = !isUpperCase;
+  caseBtn.textContent = isUpperCase ? 'AA' : 'aa';
+  caseBtn.classList.toggle('upper', isUpperCase);
+  resolveGlyphSeq();
+  scheduleRender();
+});
+// Init case button state
+caseBtn.textContent = 'AA';
+caseBtn.classList.add('upper');
+
+// ── Space Evenly Toggle ─────────────────────────────────────────
+spaceEvenBtn.addEventListener('click', () => {
+  spaceEvenly = !spaceEvenly;
+  spaceEvenBtn.classList.toggle('active', spaceEvenly);
+  scheduleRender();
+});
+
+// Init glyph seq
+resolveGlyphSeq();
+
+// ── Invert Toggle ────────────────────────────────────────────────
+invertBtn.addEventListener('click', () => {
+  invertActive = !invertActive;
+  invertBtn.classList.toggle('active', invertActive);
+  invertBtn.textContent = 'Invert';
+  scheduleRender();
+});
+document.querySelectorAll('.font-pill').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.font-pill').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    currentFont = btn.dataset.font;
+    scheduleRender();
+  });
+});
+
+// ── Sliders ─────────────────────────────────────────────────────
+[['dotSize','dotSizeVal'],['spacing','spacingVal'],['threshold','thresholdVal'],['contrast','contrastVal']].forEach(([id,vid]) => {
+  $(id).addEventListener('input', e => { $(vid).textContent = e.target.value; scheduleRender(); });
+});
+
+$('hueShift').addEventListener('input', e => { $('hueVal').textContent = e.target.value; scheduleRender(); });
+$('satShift').addEventListener('input', e => { $('satVal').textContent = e.target.value; scheduleRender(); });
+
+// ── B&W Toggle ───────────────────────────────────────────────────
+bwToggle.addEventListener('change', () => {
+  bwMode = bwToggle.checked;
+  bwBadge.classList.toggle('visible', bwMode);
+  scheduleRender();
+});
+
+C.imgGradBlend.addEventListener('input', () => { $('imgGradBlendVal').textContent = C.imgGradBlend.value; scheduleRender(); });
+
+// ── Colour Pickers (Page + Ink) ──────────────────────────────────
+const CP_PALETTE = [
+  '#ff0000','#ff7700','#ffee00','#00ff00','#00ffcc','#0088ff','#7700ff','#ff00cc',
+  '#ff6666','#ffaa66','#ffee88','#66ff88','#66ffee','#66bbff','#bb88ff','#ff88ee',
+  '#990000','#994400','#776600','#006600','#005544','#003388','#440088','#880055',
+  '#5c2d00','#8b5e3c','#c49a6c','#d4b896','#a8c090','#607850','#3c5038','#1e3020',
+  '#ffffff','#dddddd','#aaaaaa','#888888','#555555','#333333','#1a1a1a','#000000',
+];
+const cpInstances = {};
+
+const pageColorPicker = createColorPicker('pageColorWrap', 'pageColor', 'Page Colour', () => scheduleRender());
+const inkColorPicker  = createColorPicker('inkRow',        'inkColor',  'Ink Colour',  () => scheduleRender());
+
+// ── Gradient Editor (single panel with two handles) ─────────────
+// Creates a gradient bar with From/To handles. Click a handle → picker below edits that stop.
+function createGradientEditor(containerId, fromInputId, toInputId, onChangeCb) {
+  const container  = $(containerId);
+  const fromHidden = $(fromInputId);
+  const toHidden   = $(toInputId);
+  const uid = containerId; // use containerId as prefix
+
+  let active = 'from';
+  let gHex = fromHidden.value || '#000000';
+  let [gH, gS, gV] = hexToHsv(gHex);
+
+  container.innerHTML = `
+    <div class="ge-bar-row">
+      <div class="ge-handle ge-active" id="${uid}_hFrom" style="background:${fromHidden.value}" title="From colour"></div>
+      <div class="ge-bar" id="${uid}_bar"></div>
+      <div class="ge-handle" id="${uid}_hTo" style="background:${toHidden.value}" title="To colour"></div>
+    </div>
+    <div class="ge-picker" id="${uid}_picker">
+      <div class="ge-pal" id="${uid}_pal"></div>
+      <div class="cp-slider-row">
+        <span class="cp-slider-lbl">Hue</span>
+        <div class="cp-slider-track-wrap" id="${uid}_HTrack" style="background:linear-gradient(90deg,#f00,#ff0,#0f0,#0ff,#00f,#f0f,#f00)">
+          <input type="range" id="${uid}_H" min="0" max="360" step="1" value="${Math.round(gH)}">
+        </div>
+        <span class="cp-val" id="${uid}_HN">${Math.round(gH)}</span>
+      </div>
+      <div class="cp-slider-row">
+        <span class="cp-slider-lbl">Sat</span>
+        <div class="cp-slider-track-wrap" id="${uid}_STrack">
+          <input type="range" id="${uid}_S" min="0" max="100" step="1" value="${Math.round(gS*100)}">
+        </div>
+        <span class="cp-val" id="${uid}_SN">${gS.toFixed(2)}</span>
+      </div>
+      <div class="cp-slider-row">
+        <span class="cp-slider-lbl">Val</span>
+        <div class="cp-slider-track-wrap" id="${uid}_VTrack">
+          <input type="range" id="${uid}_V" min="0" max="100" step="1" value="${Math.round(gV*100)}">
+        </div>
+        <span class="cp-val" id="${uid}_VN">${gV.toFixed(2)}</span>
+      </div>
+      <div class="cp-hex-row">
+        <span class="cp-hex-hash">#</span>
+        <input class="cp-hex-field" id="${uid}_HexF" maxlength="6" value="${gHex.slice(1).toUpperCase()}">
+      </div>
+    </div>`;
+
+  // Palette
+  CP_PALETTE.forEach(c => {
+    const btn = document.createElement('div');
+    btn.className = 'cp-pal-btn'; btn.style.background = c; btn.title = c;
+    btn.addEventListener('click', () => applyColor(c));
+    $(`${uid}_pal`).appendChild(btn);
+  });
+
+  const hSl = $(`${uid}_H`), sSl = $(`${uid}_S`), vSl = $(`${uid}_V`);
+
+  function getActive()   { return active === 'from' ? fromHidden : toHidden; }
+  function getActiveHandle() { return active === 'from' ? $(`${uid}_hFrom`) : $(`${uid}_hTo`); }
+
+  function applyColor(newHex) {
+    gHex = newHex; [gH, gS, gV] = hexToHsv(gHex);
+    getActive().value = gHex;
+    getActiveHandle().style.background = gHex;
+    syncPicker(); updateBar(); onChangeCb();
+  }
+
+  function syncFromSliders() {
+    gHex = hsvToHex(gH, gS, gV);
+    getActive().value = gHex;
+    getActiveHandle().style.background = gHex;
+    syncPicker(); updateBar(); onChangeCb();
+  }
+
+  function syncPicker() {
+    $(`${uid}_HN`).textContent = Math.round(gH); hSl.value = Math.round(gH);
+    $(`${uid}_SN`).textContent = gS.toFixed(2);  sSl.value = Math.round(gS*100);
+    $(`${uid}_VN`).textContent = gV.toFixed(2);  vSl.value = Math.round(gV*100);
+    $(`${uid}_HexF`).value = gHex.slice(1).toUpperCase();
+    $(`${uid}_STrack`).style.background = `linear-gradient(90deg,${hsvToHex(gH,0,gV)},${hsvToHex(gH,1,gV)})`;
+    $(`${uid}_VTrack`).style.background = `linear-gradient(90deg,#000,${hsvToHex(gH,gS>0?gS:1,1)})`;
+    $(`${uid}_pal`).querySelectorAll('.cp-pal-btn').forEach(b =>
+      b.classList.toggle('cp-selected', b.title.toLowerCase() === gHex.toLowerCase()));
+  }
+
+  function updateBar() {
+    $(`${uid}_bar`).style.background = `linear-gradient(90deg,${fromHidden.value},${toHidden.value})`;
+  }
+
+  function selectHandle(which) {
+    active = which;
+    $(`${uid}_hFrom`).classList.toggle('ge-active', which === 'from');
+    $(`${uid}_hTo`).classList.toggle('ge-active', which === 'to');
+    gHex = getActive().value; [gH, gS, gV] = hexToHsv(gHex);
+    syncPicker();
+  }
+
+  hSl.addEventListener('input', () => { gH=+hSl.value; syncFromSliders(); });
+  sSl.addEventListener('input', () => { gS=+sSl.value/100; syncFromSliders(); });
+  vSl.addEventListener('input', () => { gV=+vSl.value/100; syncFromSliders(); });
+  $(`${uid}_HexF`).addEventListener('change', e => {
+    const raw = e.target.value.replace(/[^0-9a-fA-F]/g,'');
+    if(raw.length === 6) applyColor('#'+raw);
+  });
+  $(`${uid}_hFrom`).addEventListener('click', () => selectHandle('from'));
+  $(`${uid}_hTo`).addEventListener('click',   () => selectHandle('to'));
+
+  updateBar(); syncPicker();
+
+  return {
+    setFrom: hex => { fromHidden.value=hex; $(`${uid}_hFrom`).style.background=hex; updateBar(); if(active==='from'){gHex=hex;[gH,gS,gV]=hexToHsv(hex);syncPicker();} },
+    setTo:   hex => { toHidden.value=hex;   $(`${uid}_hTo`).style.background=hex;   updateBar(); if(active==='to'){gHex=hex;[gH,gS,gV]=hexToHsv(hex);syncPicker();} },
+  };
+}
+
+// ── Instantiate gradient editors ─────────────────────────────────
+const canvasGradEditor = createGradientEditor('canvasGradEditor', 'canvasGradFrom', 'canvasGradTo', () => scheduleRender());
+const letterGradEditor = createGradientEditor('letterGradEditor', 'gradFrom',       'gradTo',       () => scheduleRender());
+const overlayGradEditor= createGradientEditor('overlayGradEditor','imgGradFrom',    'imgGradTo',    () => scheduleRender());
+
+// ── Gradient Overlay toggle ──────────────────────────────────────
+$('gradOverlayToggle').addEventListener('change', () => {
+  $('gradOverlayConfig').style.display = $('gradOverlayToggle').checked ? 'block' : 'none';
+  scheduleRender();
+});
+
+// ── Image Color Map direction buttons ───────────────────────────
+document.querySelectorAll('.img-dir-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.img-dir-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    currentImgDir = btn.dataset.dir;
+    scheduleRender();
+  });
+});
+
+// ── Heat Map palettes ────────────────────────────────────────────
+const HEATMAP_PALETTES = {
+  thermal: { label: 'Thermal',  stops: ['#000000','#0000ff','#00ffff','#00ff00','#ffff00','#ff0000','#ffffff'] },
+  inferno: { label: 'Inferno',  stops: ['#000004','#320a5e','#781c6d','#bb3654','#ed6925','#fbb61a','#fcffa4'] },
+  plasma:  { label: 'Plasma',   stops: ['#0d0887','#6a00a8','#b12a90','#e16462','#fca636','#f0f921'] },
+  viridis: { label: 'Viridis',  stops: ['#440154','#31688e','#35b779','#fde725'] },
+  fire:    { label: 'Fire',     stops: ['#000000','#7f0000','#ff0000','#ff7f00','#ffff00','#ffffff'] },
+  neon:    { label: 'Neon',     stops: ['#000000','#ff00ff','#00ffff','#ffffff'] },
+};
+
+function heatmapGradientCSS(palette) {
+  return `linear-gradient(90deg, ${palette.stops.join(', ')})`;
+}
+
+// Interpolate through multi-stop palette at t=0..1
+function sampleHeatmap(palette, t) {
+  const stops = palette.stops;
+  const n = stops.length - 1;
+  const scaled = t * n;
+  const lo = Math.min(Math.floor(scaled), n - 1);
+  const hi = lo + 1;
+  const frac = scaled - lo;
+  const parse = hex => [
+    parseInt(hex.slice(1,3),16),
+    parseInt(hex.slice(3,5),16),
+    parseInt(hex.slice(5,7),16)
+  ];
+  const [r0,g0,b0] = parse(stops[lo]);
+  const [r1,g1,b1] = parse(stops[hi]);
+  return `rgb(${Math.round(r0+(r1-r0)*frac)},${Math.round(g0+(g1-g0)*frac)},${Math.round(b0+(b1-b0)*frac)})`;
+}
+
+// Build preset buttons
+(function buildHeatmapPresets() {
+  const container = $('heatmapPresets');
+  Object.entries(HEATMAP_PALETTES).forEach(([key, pal]) => {
+    const btn = document.createElement('button');
+    btn.className = 'heatmap-preset-btn' + (key === currentHeatmap ? ' active' : '');
+    btn.dataset.key = key;
+    btn.innerHTML = `<span class="heatmap-preset-bar" style="background:${heatmapGradientCSS(pal)}"></span><span class="heatmap-preset-label">${pal.label}</span>`;
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.heatmap-preset-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      currentHeatmap = key;
+      updateHeatmapStrip();
+      scheduleRender();
+    });
+    container.appendChild(btn);
+  });
+})();
+
+function updateHeatmapStrip() {
+  $('heatmapStrip').style.background = heatmapGradientCSS(HEATMAP_PALETTES[currentHeatmap]);
+}
+updateHeatmapStrip();
+
+// ── Image Color Map toggle ──────────────────────────────────────
+function updateColorUI() {
+  const ic = imgColorToggle.checked;
+  const ec = extColorToggle.checked;
+  const hm = heatmapToggle.checked;
+  const cg = canvasGradToggle.checked;
+  const lg = letterGradToggle.checked;
+
+  const anyColorMode = ic || ec || hm;
+
+  // Ink row: hide when any colour-map mode is on
+  inkRow.style.display = anyColorMode ? 'none' : 'block';
+
+  // Colour from Image sub-options
+  extColorConfig.classList.toggle('visible', ec);
+  extColorConfig.style.display = ec ? 'block' : 'none';
+
+  // Heat Map sub-options
+  heatmapConfig.classList.toggle('visible', hm);
+  heatmapConfig.style.display = hm ? 'block' : 'none';
+
+  // Canvas/letter gradient toggles (only when no colour-map mode is on)
+  nonImgColorToggles.style.display = anyColorMode ? 'none' : 'block';
+
+  if(!anyColorMode) {
+    $('canvasGradColors').style.display = cg ? 'block' : 'none';
+    $('letterGradColors').style.display = lg ? 'block' : 'none';
+  }
+
+  scheduleRender();
+}
+
+imgColorToggle.addEventListener('change', () => {
+  if(imgColorToggle.checked) { extColorToggle.checked = false; heatmapToggle.checked = false; }
+  updateColorUI();
+});
+extColorToggle.addEventListener('change', () => {
+  if(extColorToggle.checked) { imgColorToggle.checked = false; heatmapToggle.checked = false; }
+  updateColorUI();
+});
+heatmapToggle.addEventListener('change', () => {
+  if(heatmapToggle.checked) { imgColorToggle.checked = false; extColorToggle.checked = false; }
+  updateColorUI();
+});
+canvasGradToggle.addEventListener('change', updateColorUI);
+letterGradToggle.addEventListener('change', updateColorUI);
+
+// ── Canvas/Letter direction buttons ─────────────────────────────
+document.querySelectorAll('.dir-btn:not(.img-dir-btn)').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.dir-btn:not(.img-dir-btn)').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    currentDir = btn.dataset.dir;
+    scheduleRender();
+  });
+});
+
+document.querySelectorAll('.lgm-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.lgm-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    currentLGM = btn.dataset.lgm;
+    scheduleRender();
+  });
+});
+
+// ── Reset Effect Settings ───────────────────────────────────────
+resetSettingsBtn.addEventListener('click', () => {
+  C.dotSize.value   = SETTING_DEFAULTS.dotSize;   $('dotSizeVal').textContent   = SETTING_DEFAULTS.dotSize;
+  C.spacing.value   = SETTING_DEFAULTS.spacing;   $('spacingVal').textContent   = SETTING_DEFAULTS.spacing;
+  C.threshold.value = SETTING_DEFAULTS.threshold; $('thresholdVal').textContent = SETTING_DEFAULTS.threshold;
+  C.contrast.value  = SETTING_DEFAULTS.contrast;  $('contrastVal').textContent  = SETTING_DEFAULTS.contrast;
+  $('hueShift').value = 0; $('hueVal').textContent = '0';
+  $('satShift').value = 0; $('satVal').textContent = '0';
+  bwMode = false; bwToggle.checked = false; bwBadge.classList.remove('visible');
+  scheduleRender();
+});
+
+// ── Reset All ───────────────────────────────────────────────────
+resetAllBtn.addEventListener('click', () => {
+  // Settings
+  C.dotSize.value   = DEFAULTS.dotSize;   $('dotSizeVal').textContent   = DEFAULTS.dotSize;
+  C.spacing.value   = DEFAULTS.spacing;   $('spacingVal').textContent   = DEFAULTS.spacing;
+  C.threshold.value = DEFAULTS.threshold; $('thresholdVal').textContent = DEFAULTS.threshold;
+  C.contrast.value  = DEFAULTS.contrast;  $('contrastVal').textContent  = DEFAULTS.contrast;
+
+  // Page/Ink colour pickers
+  pageColorPicker.setValue(DEFAULTS.pageColor);
+  inkColorPicker.setValue(DEFAULTS.inkColor);
+
+  // Canvas/letter gradient
+  canvasGradEditor.setFrom(DEFAULTS.canvasGradFrom || '#6ee7b7');
+  canvasGradEditor.setTo(DEFAULTS.canvasGradTo || '#3b82f6');
+
+  // Letter gradient colours
+  letterGradEditor.setFrom(DEFAULTS.gradFrom);
+  letterGradEditor.setTo(DEFAULTS.gradTo);
+
+  // Gradient overlay
+  overlayGradEditor.setFrom(DEFAULTS.imgGradFrom);
+  overlayGradEditor.setTo(DEFAULTS.imgGradTo);
+  C.imgGradBlend.value = DEFAULTS.imgGradBlend;
+  $('imgGradBlendVal').textContent = DEFAULTS.imgGradBlend;
+  $('gradOverlayToggle').checked = false;
+  $('gradOverlayConfig').style.display = 'none';
+
+  // Invert
+  invertActive = false;
+  invertBtn.classList.remove('active');
+  invertBtn.textContent = 'Invert';
+
+  // Hue / Sat / B&W
+  $('hueShift').value = 0; $('hueVal').textContent = '0';
+  $('satShift').value = 0; $('satVal').textContent = '0';
+  bwMode = false; bwToggle.checked = false; bwBadge.classList.remove('visible');
+
+  // Toggles
+  imgColorToggle.checked   = false;
+  extColorToggle.checked   = false;
+  extColorData = null; extColorW = 0; extColorH = 0;
+  extColorThumb.src = '';
+  extColorFilename.textContent = '';
+  extColorLoaded.classList.remove('visible');
+  $('extColorBlendRow').style.display = 'none';
+  extColorZone.style.display = '';
+  heatmapToggle.checked    = false;
+  currentHeatmap = 'thermal';
+  document.querySelectorAll('.heatmap-preset-btn').forEach(b => b.classList.toggle('active', b.dataset.key === 'thermal'));
+  updateHeatmapStrip();
+  canvasGradToggle.checked = false;
+  letterGradToggle.checked = false;
+  updateColorUI();
+
+  // Char + word
+  currentChar = DEFAULTS.char;
+  currentWord = '';
+  wordInput.value = '';
+  wordChars.innerHTML = '';
+  isUpperCase = true;
+  spaceEvenly = false;
+  spaceEvenBtn.classList.remove('active');
+  spaceEvenBtn.disabled = true;
+  caseBtn.textContent = 'AA';
+  caseBtn.classList.add('upper');
+  grid.querySelectorAll('.char-btn').forEach(b => b.classList.toggle('active', b.textContent === DEFAULTS.char));
+  resolveGlyphSeq();
+
+  // Font
+  currentFont = DEFAULTS.font;
+  document.querySelectorAll('.font-pill').forEach(b => b.classList.toggle('active', b.dataset.font === DEFAULTS.font));
+
+  // Directions
+  currentDir = DEFAULTS.dir;
+  document.querySelectorAll('.dir-btn:not(.img-dir-btn)').forEach(b => b.classList.toggle('active', b.dataset.dir === DEFAULTS.dir));
+  currentImgDir = DEFAULTS.imgGradDir;
+  document.querySelectorAll('.img-dir-btn').forEach(b => b.classList.toggle('active', b.dataset.dir === DEFAULTS.imgGradDir));
+  currentLGM = DEFAULTS.lgm;
+  document.querySelectorAll('.lgm-btn').forEach(b => b.classList.toggle('active', b.dataset.lgm === DEFAULTS.lgm));
+
+  scheduleRender();
+});
+
+// ── File Handling ───────────────────────────────────────────────
+fileInput.addEventListener('change', e => loadImage(e.target.files[0]));
+uploadZone.addEventListener('dragover', e => { e.preventDefault(); uploadZone.classList.add('drag-over'); });
+uploadZone.addEventListener('dragleave', () => uploadZone.classList.remove('drag-over'));
+uploadZone.addEventListener('drop', e => {
+  e.preventDefault(); uploadZone.classList.remove('drag-over');
+  if(e.dataTransfer.files[0]) loadImage(e.dataTransfer.files[0]);
+});
+
+function loadImage(file) {
+  if(!file || !file.type.startsWith('image/')) return;
+  const url = URL.createObjectURL(file);
+  sourceImg.onload = () => {
+    hasImage = true;
+    updatePreview();
+    render();
+    downloadBtn.disabled = false;
+    downloadSvgBtn.disabled = false;
+    previewWrap.classList.add('visible');
+    URL.revokeObjectURL(url);
+  };
+  sourceImg.src = url;
+}
+
+// ── External Colour Image ───────────────────────────────────────
+extColorInput.addEventListener('change', e => loadExtColor(e.target.files[0]));
+extColorZone.addEventListener('dragover', e => { e.preventDefault(); extColorZone.classList.add('drag-over'); });
+extColorZone.addEventListener('dragleave', () => extColorZone.classList.remove('drag-over'));
+extColorZone.addEventListener('drop', e => {
+  e.preventDefault(); extColorZone.classList.remove('drag-over');
+  if(e.dataTransfer.files[0]) loadExtColor(e.dataTransfer.files[0]);
+});
+
+function loadExtColor(file) {
+  if(!file || !file.type.startsWith('image/')) return;
+  const url = URL.createObjectURL(file);
+  const img = new Image();
+  img.onload = () => {
+    // Rasterise into an offscreen canvas — cap at 1400px like source
+    const MAX = 1400;
+    let w = img.naturalWidth, h = img.naturalHeight;
+    if(w > MAX) { h = Math.round(h * MAX / w); w = MAX; }
+    if(h > MAX) { w = Math.round(w * MAX / h); h = MAX; }
+    const off = document.createElement('canvas');
+    off.width = w; off.height = h;
+    off.getContext('2d').drawImage(img, 0, 0, w, h);
+    extColorData = off.getContext('2d').getImageData(0, 0, w, h).data;
+    extColorW = w;
+    extColorH = h;
+
+    // Show thumbnail
+    extColorThumb.src = url;
+    extColorFilename.textContent = file.name;
+    extColorZone.style.display = 'none';
+    extColorLoaded.classList.add('visible');
+    $('extColorBlendRow').style.display = 'block';
+
+    scheduleRender();
+  };
+  img.src = url;
+}
+
+extColorClear.addEventListener('click', () => {
+  extColorData = null; extColorW = 0; extColorH = 0;
+  extColorThumb.src = '';
+  extColorFilename.textContent = '';
+  extColorLoaded.classList.remove('visible');
+  $('extColorBlendRow').style.display = 'none';
+  extColorZone.style.display = '';
+  extColorInput.value = '';
+  scheduleRender();
+});
+
+$('extColorOpacity').addEventListener('input', e => {
+  $('extColorOpacityVal').textContent = e.target.value;
+  scheduleRender();
+});
+function updatePreview() {
+  if(!hasImage) return;
+  const wrap   = previewCanvas.parentElement;
+  const pw     = wrap.clientWidth || 220;
+  const ph     = 90;
+  previewCanvas.width  = pw;
+  previewCanvas.height = ph;
+  const pctx = previewCanvas.getContext('2d');
+
+  // Cover-fit the image
+  const iw = sourceImg.naturalWidth, ih = sourceImg.naturalHeight;
+  const scale = Math.max(pw / iw, ph / ih);
+  const dw = iw * scale, dh = ih * scale;
+  const dx = (pw - dw) / 2, dy = (ph - dh) / 2;
+  pctx.drawImage(sourceImg, dx, dy, dw, dh);
+
+  // CSS filter to reflect adjustments live
+  const contrastV = parseInt($('contrast').value);
+  const hue       = parseInt($('hueShift').value);
+  const sat       = parseInt($('satShift').value);
+  const cFactor   = (1 + contrastV / 100).toFixed(2);
+  const sFactor   = Math.max(0, 1 + sat / 100).toFixed(2);
+
+  const filters = [
+    `contrast(${cFactor})`,
+    hue  !== 0 ? `hue-rotate(${hue}deg)` : '',
+    sat  !== 0 ? `saturate(${sFactor})`  : '',
+    bwMode     ? 'grayscale(1)'           : '',
+  ].filter(Boolean).join(' ');
+
+  previewCanvas.style.filter = filters || 'none';
+
+  // Position threshold marker: maps 0–255 luminance to 0–100% of width
+  const tFraction = parseInt($('threshold').value) / 255;
+  const bar = $('previewThresholdBar');
+  if(bar) bar.style.left = `${(tFraction * 100).toFixed(1)}%`;
+}
+
+function scheduleRender() {
+  if(!hasImage) return;
+  updatePreview();
+  clearTimeout(renderTimer);
+  renderTimer = setTimeout(render, 80);
+}
+
+// ── Render ──────────────────────────────────────────────────────
+function render(fullRes = false) {
+  const dotSize    = parseInt(C.dotSize.value);
+  const spacing    = parseInt(C.spacing.value);
+  const threshold  = parseInt(C.threshold.value);
+  const contrastV  = parseInt(C.contrast.value);
+  const hueShiftV  = parseInt($('hueShift').value);
+  const satShiftV  = parseInt($('satShift').value);
+  const useImgColor    = imgColorToggle.checked;
+  const useExtColor    = extColorToggle.checked && extColorData !== null;
+  const useHeatmap     = heatmapToggle.checked;
+  const useCanvasGrad  = !useImgColor && !useExtColor && !useHeatmap && canvasGradToggle.checked;
+  const useLetterGrad  = !useImgColor && !useExtColor && !useHeatmap && letterGradToggle.checked;
+  const useOverlay     = $('gradOverlayToggle').checked;
+  const imgBlend       = useOverlay ? (parseInt(C.imgGradBlend.value) / 100) : 0;
+  const extOpacity     = useExtColor ? (parseInt($('extColorOpacity').value) / 100) : 1;
+  const useHueSat      = hueShiftV !== 0 || satShiftV !== 0 || bwMode;
+
+  // Source — always calculate preview dimensions first so we can scale glyphs
+  const PREVIEW_MAX = 1400;
+  let nw = sourceImg.naturalWidth, nh = sourceImg.naturalHeight;
+  let pw = nw, ph = nh; // preview dimensions
+  if(pw > PREVIEW_MAX) { ph = Math.round(ph * PREVIEW_MAX / pw); pw = PREVIEW_MAX; }
+  if(ph > PREVIEW_MAX) { pw = Math.round(pw * PREVIEW_MAX / ph); ph = PREVIEW_MAX; }
+
+  // At full res use native dimensions; at preview use capped ones
+  let w = fullRes ? nw : pw;
+  let h = fullRes ? nh : ph;
+
+  // Scale spacing + dotSize so the visual density matches the preview exactly
+  const scaleF = fullRes ? (w / pw) : 1;
+  const effSpacing = Math.max(1, Math.round(spacing * scaleF));
+  const effDotSize = Math.max(1, Math.round(dotSize * scaleF));
+
+  const off = document.createElement('canvas');
+  off.width = w; off.height = h;
+  const offCtx = off.getContext('2d');
+  offCtx.drawImage(sourceImg, 0, 0, w, h);
+  const srcData = offCtx.getImageData(0, 0, w, h).data;
+
+  canvas.width  = w;
+  canvas.height = h;
+
+  // Background: solid page colour, or the canvas gradient painted behind the glyphs
+  if(useCanvasGrad) {
+    let bgGrad;
+    switch(currentDir) {
+      case 'horizontal': bgGrad = ctx.createLinearGradient(0, 0, w, 0); break;
+      case 'vertical':   bgGrad = ctx.createLinearGradient(0, 0, 0, h); break;
+      case 'diagonal':   bgGrad = ctx.createLinearGradient(0, 0, w, h); break;
+      case 'radial':     bgGrad = ctx.createRadialGradient(w/2, h/2, 0, w/2, h/2, Math.max(w,h)*0.6); break;
+    }
+    bgGrad.addColorStop(0, C.canvasGradFrom.value);
+    bgGrad.addColorStop(1, C.canvasGradTo.value);
+    ctx.fillStyle = bgGrad;
+  } else {
+    ctx.fillStyle = C.pageColor.value;
+  }
+  ctx.fillRect(0, 0, w, h);
+
+  // Pre-build image gradient data (no longer needed for canvas grad — painted as bg)
+  const cf = (259 * (contrastV + 255)) / (255 * (259 - contrastV));
+  let glyphIdx = 0;
+  const useSpaceEvenly = spaceEvenly && glyphSeq.length > 1;
+  const colWidth = useSpaceEvenly ? w / glyphSeq.length : 0;
+
+  // SVG glyph data — collected every render for vector export
+  svgGlyphs = [];
+  const svgW = w, svgH = h;
+
+  // Pre-compute ink color with hue/sat/bw applied (for solid-ink modes)
+  let effectiveInkColor = C.inkColor.value;
+  if(useHueSat && !useImgColor && !useExtColor) {
+    const [ir, ig, ib] = hexToRgb(C.inkColor.value);
+    let [fhK, fsK, flK] = rgbToHsl(ir, ig, ib);
+    fhK = ((fhK + hueShiftV / 360) % 1 + 1) % 1;
+    fsK = Math.max(0, Math.min(1, fsK + satShiftV / 100));
+    if(bwMode) fsK = 0;
+    const [rik, gik, bik] = hslToRgb(fhK, fsK, flK);
+    effectiveInkColor = `rgb(${rik},${gik},${bik})`;
+  }
+
+  for(let y = 0; y < h; y += effSpacing) {
+    for(let x = 0; x < w; x += effSpacing) {
+      const px  = Math.min(Math.floor(x), w - 1);
+      const py  = Math.min(Math.floor(y), h - 1);
+      const idx = (py * w + px) * 4;
+
+      const rawR = srcData[idx], rawG = srcData[idx+1], rawB = srcData[idx+2];
+
+      // 1. Contrast
+      let r = clamp(cf * (rawR - 128) + 128);
+      let g = clamp(cf * (rawG - 128) + 128);
+      let b = clamp(cf * (rawB - 128) + 128);
+
+      // Luminance from contrast-adjusted raw pixels (hue/sat does NOT affect placement)
+      const lum = 0.299*r + 0.587*g + 0.114*b;
+      // Invert: draw on bright areas instead of dark
+      const shouldDraw = invertActive ? lum >= (255 - threshold) : lum <= threshold;
+      if(!shouldDraw) continue;
+
+      const t    = (255 - lum) / 255;
+      const size = Math.max(4, t * effDotSize);
+      const cx   = x + effSpacing * 0.5;
+      const cy   = y + effSpacing * 0.5;
+
+      // Pick glyph: space-evenly maps x-position → column → letter
+      let glyph;
+      if(useSpaceEvenly) {
+        const col = Math.min(Math.floor(cx / colWidth), glyphSeq.length - 1);
+        glyph = glyphSeq[col];
+      } else {
+        glyph = glyphSeq[glyphIdx % glyphSeq.length];
+        glyphIdx++;
+      }
+
+      ctx.save();
+      ctx.font         = `bold ${size}px ${currentFont}`;
+      ctx.textAlign    = 'center';
+      ctx.textBaseline = 'middle';
+
+      // Resolve color as a string for both canvas and SVG export
+      let fillColor;
+      if(useExtColor) {
+        // Sample from the external colour image, scaled to match canvas dimensions
+        const ex = Math.min(Math.floor(cx / w * extColorW), extColorW - 1);
+        const ey = Math.min(Math.floor(cy / h * extColorH), extColorH - 1);
+        const ei = (ey * extColorW + ex) * 4;
+        let er = extColorData[ei], eg = extColorData[ei+1], eb = extColorData[ei+2];
+        // Blend with ink colour based on opacity slider
+        if(extOpacity < 1) {
+          const [ir, ig, ib] = hexToRgb(C.inkColor.value);
+          er = Math.round(ir + (er - ir) * extOpacity);
+          eg = Math.round(ig + (eg - ig) * extOpacity);
+          eb = Math.round(ib + (eb - ib) * extOpacity);
+        }
+        // Apply hue/sat/bw to the external colour sample
+        if(useHueSat) {
+          let [fhE, fsE, flE] = rgbToHsl(er, eg, eb);
+          fhE = ((fhE + hueShiftV / 360) % 1 + 1) % 1;
+          fsE = Math.max(0, Math.min(1, fsE + satShiftV / 100));
+          if(bwMode) fsE = 0;
+          [er, eg, eb] = hslToRgb(fhE, fsE, flE);
+        }
+        fillColor = `rgb(${er},${eg},${eb})`;
+      } else if(useHeatmap) {
+        // Normalize within the actual drawable range so the full gradient always shows.
+        // Normal mode draws lum 0..threshold; invert draws lum (255-threshold)..255.
+        let t;
+        if(invertActive) {
+          const lo = 255 - threshold;
+          t = threshold > 0 ? (lum - lo) / threshold : 1;
+        } else {
+          t = threshold > 0 ? lum / threshold : 0;
+        }
+        t = Math.max(0, Math.min(1, t));
+        fillColor = sampleHeatmap(HEATMAP_PALETTES[currentHeatmap], t);
+      } else if(useImgColor) {
+        // Apply hue/sat/bw to the photo colour for this glyph
+        let [fhI, fsI, flI] = rgbToHsl(r, g, b);
+        if(useHueSat) {
+          fhI = ((fhI + hueShiftV / 360) % 1 + 1) % 1;
+          fsI = Math.max(0, Math.min(1, fsI + satShiftV / 100));
+          if(bwMode) fsI = 0;
+        }
+        const [adjR, adjG, adjB] = hslToRgb(fhI, fsI, flI);
+        fillColor = `rgb(${adjR},${adjG},${adjB})`;
+      } else if(useLetterGrad) {
+        // SVG export: blend the two letter-grad colours at midpoint
+        fillColor = blendColors(C.gradFrom.value, C.gradTo.value, 0.5);
+        ctx.fillStyle = buildLetterGrad(cx, cy, size);
+        ctx.fillText(glyph, cx, cy);
+        ctx.restore();
+        svgGlyphs.push({ ch: glyph, x: cx, y: cy, size, color: fillColor, font: currentFont });
+        continue;
+      } else {
+        // Canvas gradient background already painted — glyphs use ink colour (with hue/sat)
+        fillColor = effectiveInkColor;
+      }
+
+      ctx.fillStyle = fillColor;
+      ctx.fillText(glyph, cx, cy);
+      ctx.restore();
+      svgGlyphs.push({ ch: glyph, x: cx, y: cy, size, color: fillColor, font: currentFont });
+    }
+  }
+
+  // ── Post-render gradient overlay ────────────────────────────────
+  if(useOverlay && imgBlend > 0) {
+    let overlayGrad;
+    switch(currentImgDir) {
+      case 'horizontal': overlayGrad = ctx.createLinearGradient(0, 0, w, 0); break;
+      case 'vertical':   overlayGrad = ctx.createLinearGradient(0, 0, 0, h); break;
+      case 'diagonal':   overlayGrad = ctx.createLinearGradient(0, 0, w, h); break;
+      case 'radial':     overlayGrad = ctx.createRadialGradient(w/2, h/2, 0, w/2, h/2, Math.max(w,h)*0.6); break;
+    }
+    overlayGrad.addColorStop(0, C.imgGradFrom.value);
+    overlayGrad.addColorStop(1, C.imgGradTo.value);
+    ctx.globalAlpha = imgBlend;
+    ctx.fillStyle = overlayGrad;
+    ctx.fillRect(0, 0, w, h);
+    ctx.globalAlpha = 1;
+  }
+
+  placeholder.style.display = 'none';
+  canvas.classList.add('visible');
+}
+
+// ── Gradient builders ────────────────────────────────────────────
+function buildLetterGrad(cx, cy, size) {
+  const half = size * 0.7;
+  let grad;
+  switch(currentLGM) {
+    case 'horizontal': grad = ctx.createLinearGradient(cx-half, cy, cx+half, cy); break;
+    case 'vertical':   grad = ctx.createLinearGradient(cx, cy-half, cx, cy+half); break;
+    case 'diagonal':   grad = ctx.createLinearGradient(cx-half, cy-half, cx+half, cy+half); break;
+    case 'radial':     grad = ctx.createRadialGradient(cx, cy, 0, cx, cy, half); break;
+  }
+  grad.addColorStop(0, C.gradFrom.value);
+  grad.addColorStop(1, C.gradTo.value);
+  return grad;
+}
+
+function buildCanvasGradData(w, h) {
+  const gc = document.createElement('canvas');
+  gc.width = w; gc.height = h;
+  const gx = gc.getContext('2d');
+  let grad;
+  switch(currentDir) {
+    case 'horizontal': grad = gx.createLinearGradient(0, 0, w, 0); break;
+    case 'vertical':   grad = gx.createLinearGradient(0, 0, 0, h); break;
+    case 'diagonal':   grad = gx.createLinearGradient(0, 0, w, h); break;
+    case 'radial':     grad = gx.createRadialGradient(w/2, h/2, 0, w/2, h/2, Math.max(w,h)*0.6); break;
+  }
+  grad.addColorStop(0, C.gradFrom.value);
+  grad.addColorStop(1, C.gradTo.value);
+  gx.fillStyle = grad;
+  gx.fillRect(0, 0, w, h);
+  return gx.getImageData(0, 0, w, h).data;
+}
+
+function buildImgGradData(w, h) {
+  const gc = document.createElement('canvas');
+  gc.width = w; gc.height = h;
+  const gx = gc.getContext('2d');
+  let grad;
+  switch(currentImgDir) {
+    case 'horizontal': grad = gx.createLinearGradient(0, 0, w, 0); break;
+    case 'vertical':   grad = gx.createLinearGradient(0, 0, 0, h); break;
+    case 'diagonal':   grad = gx.createLinearGradient(0, 0, w, h); break;
+    case 'radial':     grad = gx.createRadialGradient(w/2, h/2, 0, w/2, h/2, Math.max(w,h)*0.6); break;
+  }
+  grad.addColorStop(0, C.imgGradFrom.value);
+  grad.addColorStop(1, C.imgGradTo.value);
+  gx.fillStyle = grad;
+  gx.fillRect(0, 0, w, h);
+  return gx.getImageData(0, 0, w, h).data;
+}
+
+function sampleGrad(data, w, h, x, y) {
+  const px = Math.min(Math.floor(x), w - 1);
+  const py = Math.min(Math.floor(y), h - 1);
+  const i  = (py * w + px) * 4;
+  return `rgb(${data[i]},${data[i+1]},${data[i+2]})`;
+}
+
+// ── Color helpers ────────────────────────────────────────────────
+function rgbToHsl(r, g, b) {
+  r /= 255; g /= 255; b /= 255;
+  const max = Math.max(r, g, b), min = Math.min(r, g, b), d = max - min;
+  let h = 0, s = 0;
+  const l = (max + min) / 2;
+  if(d !== 0) {
+    s = d / (1 - Math.abs(2 * l - 1));
+    switch(max) {
+      case r: h = ((g - b) / d + 6) % 6; break;
+      case g: h = (b - r) / d + 2;        break;
+      case b: h = (r - g) / d + 4;        break;
+    }
+    h /= 6;
+  }
+  return [h, s, l];
+}
+
+function hslToRgb(h, s, l) {
+  const c = (1 - Math.abs(2 * l - 1)) * s;
+  const x = c * (1 - Math.abs((h * 6) % 2 - 1));
+  const m = l - c / 2;
+  let r = 0, g = 0, b = 0;
+  if      (h < 1/6) { r = c; g = x; }
+  else if (h < 2/6) { r = x; g = c; }
+  else if (h < 3/6) { g = c; b = x; }
+  else if (h < 4/6) { g = x; b = c; }
+  else if (h < 5/6) { r = x; b = c; }
+  else              { r = c; b = x; }
+  return [Math.round((r + m) * 255), Math.round((g + m) * 255), Math.round((b + m) * 255)];
+}
+
+function clamp(v) { return Math.max(0, Math.min(255, v)); }
+
+// ── Download PNG ─────────────────────────────────────────────────
+// ── Dark Mode ────────────────────────────────────────────
+const darkModeBtn = $('darkModeBtn');
+(function() {
+  const stored = localStorage.getItem('pe_dark');
+  if(stored === '1') document.body.classList.add('dark');
+  updateDarkIcon();
+})();
+darkModeBtn.addEventListener('click', () => {
+  document.body.classList.toggle('dark');
+  localStorage.setItem('pe_dark', document.body.classList.contains('dark') ? '1' : '0');
+  updateDarkIcon();
+});
+function updateDarkIcon() {
+  const dark = document.body.classList.contains('dark');
+  darkModeBtn.innerHTML = dark
+    ? '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>'
+    : '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>';
+  darkModeBtn.title = dark ? 'Switch to light mode' : 'Switch to dark mode';
+}
+
+downloadBtn.addEventListener('click', () => {
+  render(true);
+  const a = document.createElement('a');
+  a.download = 'halftone-studio.png';
+  a.href = canvas.toDataURL('image/png');
+  a.click();
+  render(); // restore preview-res canvas
+});
+
+// ── Helper: hex/rgb → rgb components ────────────────────────────
+function hexToRgb(hex) {
+  const r = parseInt(hex.slice(1,3),16), g = parseInt(hex.slice(3,5),16), b = parseInt(hex.slice(5,7),16);
+  return [r,g,b];
+}
+function rgbToHex(r, g, b) {
+  return '#' + [r,g,b].map(x => Math.max(0,Math.min(255,Math.round(x))).toString(16).padStart(2,'0')).join('');
+}
+function hexToHsv(hex) {
+  const [r,g,b] = hexToRgb(hex);
+  const r1=r/255, g1=g/255, b1=b/255;
+  const max=Math.max(r1,g1,b1), min=Math.min(r1,g1,b1), d=max-min;
+  let h=0, s=0; const v=max;
+  if(d!==0) {
+    s = d/max;
+    switch(max){
+      case r1: h=((g1-b1)/d+(g1<b1?6:0))/6; break;
+      case g1: h=((b1-r1)/d+2)/6; break;
+      case b1: h=((r1-g1)/d+4)/6; break;
+    }
+  }
+  return [h*360, s, v];
+}
+function hsvToHex(h, s, v) {
+  const f = n => { const k=(n+h/60)%6; return v-v*s*Math.max(0,Math.min(k,4-k,1)); };
+  return rgbToHex(f(5)*255, f(3)*255, f(1)*255);
+}
+
+// ── Custom Colour Picker ─────────────────────────────────────────
+function createColorPicker(wrapperId, hiddenId, label, onChange) {
+  const wrap   = $(wrapperId);
+  const hidden = $(hiddenId);
+
+  let hex = hidden.value || '#000000';
+  let [h, s, v] = hexToHsv(hex);
+
+  wrap.innerHTML = `
+    <div class="cp-header">
+      <div class="cp-swatch" id="${hiddenId}CPSwatch" style="background:${hex}"></div>
+      <div class="cp-header-info">
+        <span class="cp-header-label">${label}</span>
+        <span class="cp-header-hex" id="${hiddenId}CPHex">${hex}</span>
+      </div>
+      <span class="cp-chevron">▾</span>
+    </div>
+    <div class="cp-body">
+      <div class="cp-top">
+        <div class="cp-preview" id="${hiddenId}CPPreview" style="background:${hex}"></div>
+        <div class="cp-palette" id="${hiddenId}CPPalette"></div>
+      </div>
+
+      <div class="cp-slider-row">
+        <span class="cp-slider-lbl">Hue</span>
+        <div class="cp-slider-track-wrap" id="${hiddenId}HTrack" style="background:linear-gradient(90deg,#f00,#ff0,#0f0,#0ff,#00f,#f0f,#f00)">
+          <input type="range" id="${hiddenId}H" min="0" max="360" step="1" value="${Math.round(h)}">
+        </div>
+        <span class="cp-val" id="${hiddenId}HN">${Math.round(h)}</span>
+      </div>
+      <div class="cp-slider-row">
+        <span class="cp-slider-lbl">Sat</span>
+        <div class="cp-slider-track-wrap" id="${hiddenId}STrack">
+          <input type="range" id="${hiddenId}S" min="0" max="100" step="1" value="${Math.round(s*100)}">
+        </div>
+        <span class="cp-val" id="${hiddenId}SN">${(s).toFixed(2)}</span>
+      </div>
+      <div class="cp-slider-row">
+        <span class="cp-slider-lbl">Value</span>
+        <div class="cp-slider-track-wrap" id="${hiddenId}VTrack">
+          <input type="range" id="${hiddenId}V" min="0" max="100" step="1" value="${Math.round(v*100)}">
+        </div>
+        <span class="cp-val" id="${hiddenId}VN">${(v).toFixed(2)}</span>
+      </div>
+
+
+      <div class="cp-hex-row">
+        <span class="cp-hex-hash">#</span>
+        <input class="cp-hex-field" id="${hiddenId}CPHexField" maxlength="6" value="${hex.slice(1).toUpperCase()}">
+      </div>
+    </div>`;
+
+  // Palette
+  CP_PALETTE.forEach(c => {
+    const btn = document.createElement('div');
+    btn.className = 'cp-pal-btn'; btn.style.background = c; btn.title = c;
+    btn.addEventListener('click', () => { setValue(c); onChange(hex); });
+    $(hiddenId+'CPPalette').appendChild(btn);
+  });
+
+  // Ensure the wrapper has the cp-wrap class so CSS open/close rules apply
+  wrap.classList.add('cp-wrap');
+
+  // Open by default; toggle on header click
+  wrap.classList.add('open');
+  wrap.querySelector('.cp-header').addEventListener('click', () => wrap.classList.toggle('open'));
+
+  // Slider refs
+  const hSl=$(`${hiddenId}H`), sSl=$(`${hiddenId}S`), vSl=$(`${hiddenId}V`);
+
+  hSl.addEventListener('input', () => { h=+hSl.value; sync(); onChange(hex); });
+  sSl.addEventListener('input', () => { s=+sSl.value/100; sync(); onChange(hex); });
+  vSl.addEventListener('input', () => { v=+vSl.value/100; sync(); onChange(hex); });
+
+  $(`${hiddenId}CPHexField`).addEventListener('change', e => {
+    const raw = e.target.value.replace(/[^0-9a-fA-F]/g,'');
+    if(raw.length === 6) { setValue('#'+raw); onChange(hex); }
+  });
+
+  function sync() {
+    hex = hsvToHex(h, s, v);
+
+    $(`${hiddenId}CPSwatch`).style.background   = hex;
+    $(`${hiddenId}CPHex`).textContent            = hex;
+    $(`${hiddenId}CPPreview`).style.background   = hex;
+    $(`${hiddenId}CPHexField`).value             = hex.slice(1).toUpperCase();
+
+    hSl.value=Math.round(h);  $(`${hiddenId}HN`).textContent=Math.round(h);
+    sSl.value=Math.round(s*100); $(`${hiddenId}SN`).textContent=(s).toFixed(2);
+    vSl.value=Math.round(v*100); $(`${hiddenId}VN`).textContent=(v).toFixed(2);
+    // Gradient track backgrounds
+    $(`${hiddenId}STrack`).style.background=`linear-gradient(90deg,${hsvToHex(h,0,v)},${hsvToHex(h,1,v)})`;
+    $(`${hiddenId}VTrack`).style.background=`linear-gradient(90deg,#000,${hsvToHex(h,s>0?s:1,1)})`;
+
+    hidden.value = hex;
+
+    $(`${hiddenId}CPPalette`).querySelectorAll('.cp-pal-btn').forEach(btn =>
+      btn.classList.toggle('cp-selected', btn.title.toLowerCase() === hex.toLowerCase()));
+  }
+
+  function setValue(newHex) { hex=newHex; [h,s,v]=hexToHsv(hex); sync(); }
+  function getValue() { return hex; }
+
+  sync();
+  cpInstances[hiddenId] = { getValue, setValue };
+  return { getValue, setValue };
+}
+function blendColors(hexA, hexB, t) {
+  const [ar,ag,ab] = hexToRgb(hexA);
+  const [br,bg,bb] = hexToRgb(hexB);
+  return `rgb(${Math.round(ar+(br-ar)*t)},${Math.round(ag+(bg-ag)*t)},${Math.round(ab+(bb-ab)*t)})`;
+}
+
+// ── Download SVG (true vector) ───────────────────────────────────
+downloadSvgBtn.addEventListener('click', () => {
+  render(true); // collect svgGlyphs at full resolution
+  if(!svgGlyphs.length) { render(); return; }
+
+  // Measure the rendered canvas dimensions
+  const w = canvas.width, h = canvas.height;
+  const bg = C.pageColor.value;
+
+  // Collect unique fonts for @font-face hints (web fonts won't embed but name is preserved)
+  const usedFonts = [...new Set(svgGlyphs.map(g => g.font))];
+
+  // Build SVG text elements — group by color for smaller files
+  let textEls = '';
+  for(const g of svgGlyphs) {
+    // SVG dominant-baseline + text-anchor = centre the glyph like canvas textBaseline:'middle' + textAlign:'center'
+    const safeChar = g.ch
+      .replace(/&/g,'&amp;')
+      .replace(/</g,'&lt;')
+      .replace(/>/g,'&gt;')
+      .replace(/"/g,'&quot;');
+    textEls += `<text x="${g.x.toFixed(2)}" y="${g.y.toFixed(2)}" `
+      + `font-family="${g.font}" font-size="${g.size.toFixed(2)}" font-weight="bold" `
+      + `fill="${g.color}" text-anchor="middle" dominant-baseline="central">${safeChar}</text>\n`;
+  }
+
+  const svg = `<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}" viewBox="0 0 ${w} ${h}">
+  <rect width="${w}" height="${h}" fill="${bg}"/>
+  ${textEls}
+</svg>`;
+
+  const blob = new Blob([svg], { type: 'image/svg+xml' });
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  a.download = 'halftone-studio.svg';
+  a.href = url;
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(url), 2000);
+  render(); // restore preview-res canvas
+});
+</script>
+</body>
+</html>
